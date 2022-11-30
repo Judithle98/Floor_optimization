@@ -32,7 +32,7 @@ def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equ
                 df_optimization['Room ID & Capacity'] = df_optimization['Room ID'] + df_optimization['Room Cap']
             
                 capacities_m = df_optimization['Capacities meeting'].tolist() #= df_optimization['ResUnitCapacity']
-                meeting_eq= list(df_optimization["Fac_Equipment"])
+                meeting_eq= list(df_optimization["new_Equipment"])
 
                 meetings= df_optimization['ResCode']
                 days_optimization = df_optimization['Start'].apply(lambda x: x.strftime('%Y-%m-%d')).unique()
@@ -89,9 +89,9 @@ def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equ
                                 model.addConstr(np.array([P[d, i, j[1], k] for k in ids]) @ np.array(capacities_m) <= capacities_room[j[0]],
                                                     name='Capacity constraint')
                                    
-                                model.addConstr(np.array([P[d,i,j[1], k] for k in ids]) @ np.array(meeting_eq) == equipments_room[j[0]],
-                                        name='Equipment constraint')
-            
+                                for k in ids:
+                                    model.addConstr((P[d,i,j[1], k]==1 )>> (np.array([P[d,i,j[1], k] for k in ids]) @ np.array(meeting_eq) == equipments_room[j[0]]),
+                                        name='Equipment constraint') 
            
                 for d in days:
                     # ids = data_optimization[data_optimization['Day'] == d]['ResCode'].tolist()
@@ -188,14 +188,13 @@ def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equ
                                             minutes_finish = '00'
                                         ids=list(ids)
 
-                                        # Add data to the dataframe for the graph
                                         dictionary['Room ID & Capacity'] = f'ID: {j}. Capacity: {dct_rooms_caps[j]}. Equipment: {dct_rooms_eq[j]}'
                                         #dictionary['Room ID & Capacity'] = f'ID: {j}. Capacity: {dct_rooms_caps[j]}'
                                         dictionary['Start'] = f'{d} {int(start_day[meeting_id] // 60)}:{minutes_start}:00'
                                         dictionary['End'] = f'{d} {int(finish_day[meeting_id] // 60)}:{minutes_finish}:00'
                                         dictionary['Meeting ID & Equipment'] = f'ID = {ids[meeting_id]} & Equ: {meeting_eq[meeting_id]}'
                                         dictionary['Meeting Capacity'] = capacities_m[meeting_id]
-                                        #dictionary['Equipment Meeting']= meeting_eq[meeting_id]
+
 
                                         data.append(dictionary)
                                         dictionary = {}

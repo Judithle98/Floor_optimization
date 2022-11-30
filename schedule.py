@@ -312,8 +312,9 @@ def schedule_rooms2(comb,intervals, all_days,total_rooms_ids, capacities_room, e
                                 model.addConstr(np.array([P[d, i, j[1], k] for k in ids]) @ np.array(capacities_m) <= capacities_room[j[0]],
                                                     name='Capacity constraint')
 
-                                model.addConstr(gp.quicksum(np.array([P[d,i,j[1], k] for k in ids]) @ np.array(meeting_eq)) <= equipments_room[j[0]],
-                                        name='Equipment constraint')
+                                for k in ids:
+                                    model.addConstr((P[d,i,j[1], k]==1 )>> (np.array([P[d,i,j[1], k] for k in ids]) @ np.array(meeting_eq) == equipments_room[j[0]]),
+                                        name='Equipment constraint') 
 
                 for d in days:
                     # ids = data_optimization[data_optimization['Day'] == d]['ResCode'].tolist()
