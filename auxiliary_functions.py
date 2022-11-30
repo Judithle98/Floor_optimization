@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 
 
 ## Helper functions
-
 #creates a column 'Floor'which extract the floor from the ResUnitCode (specific to Planon data)
 def create_floor_col(data_optimization):
     
