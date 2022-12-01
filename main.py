@@ -49,6 +49,7 @@ d_rooms_caps = concat_perm_rooms(dct, floors_perm)
 #Some data for the optimization model
 intervals = 20
 printing = True
+incl_equipments= True
 #make 2 new columns start and end
 data_optimization['Start'] = pd.to_datetime(data_optimization.ResStartDateTime)
 data_optimization['End'] = pd.to_datetime(data_optimization.ResEndDateTime)
@@ -100,17 +101,19 @@ def factorize_equipment(df_optimization):
 # for i, eq in enumerate(data_optimization['ResUnitName']):
 #     if eq!='(Smartboard)' and eq!='(Beamer)' and eq!='(Tv screen)':
 #          data_optimization.at[i,'new_Equipment'] = ""
-data_optimization['new_Equipment'] = data_optimization['ResUnitName']
 
-equipments= np.unique(data_optimization['new_Equipment'])
-equipments_clean = [eq for eq in equipments if  eq!='(Beamer)' and  eq!='(Smartboard)' and eq!='(Tv screen)' ]
+if incl_equipments:
+    data_optimization['new_Equipment'] = data_optimization['ResUnitName']
+
+    equipments= np.unique(data_optimization['new_Equipment'])
+    equipments_clean = [eq for eq in equipments if  eq!='(Beamer)' and  eq!='(Smartboard)' and eq!='(Tv screen)' ]
 
 
-for eq in equipments_clean:
-    data_optimization['new_Equipment']= data_optimization['new_Equipment'].replace(eq, '')
+    for eq in equipments_clean:
+        data_optimization['new_Equipment']= data_optimization['new_Equipment'].replace(eq, '')
 
-labels,uniques , data_optimization = factorize_equipment(data_optimization)
-print(uniques)
+    labels,uniques , data_optimization = factorize_equipment(data_optimization)
+    print(uniques)
 
 for comb, rooms  in d_rooms_caps.items():
 
@@ -129,11 +132,12 @@ for comb, rooms  in d_rooms_caps.items():
     total_rooms_ids = list(dct_rooms_caps.keys())
     equipments_room = list(dct_rooms_eq.values())
     
-    #for equipments
-    df =schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room, equipments_room,  data_optimization,dct_rooms_caps,dct_rooms_eq)      
-    
-    #no equipments
-    #df =schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,  data_optimization,dct_rooms_caps)      
+    if incl_equipments:
+        #for equipments
+        df =schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room, equipments_room,  data_optimization,dct_rooms_caps,dct_rooms_eq)      
+    else:
+        #no equipments
+        df =schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,  data_optimization,dct_rooms_caps)      
 # for day in enumerate(tqdm(all_days)):
 #             if day[0] == len(all_days)-1: # just to stop at the end
 
