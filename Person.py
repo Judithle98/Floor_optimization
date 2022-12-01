@@ -1,5 +1,5 @@
 class Person:
-    def __init__(self, name, department,team, nr_workdays,reservations):
+    def __init__(self, name, department,team, reservations):
         self.name = name
         self.department = department
         self.team=team

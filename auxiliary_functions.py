@@ -10,7 +10,8 @@ import itertools
 from matplotlib.ticker import MaxNLocator
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-
+from faker import Faker
+from Person import Person
 
 
 ## Helper functions
@@ -90,3 +91,51 @@ def find_capacities(rooms, data):
         index= np.where(data["ResUnitCode"]==room)[0][0]
         dict_room_caps[room]=data.iloc[index]["ResUnitCapacity"]
     return dict_room_caps
+
+# for equipments then delete later
+def find_equipments(rooms, data):
+    dict_room_eq= dict.fromkeys(rooms)
+    for room in rooms: 
+        index= np.where(data["ResUnitCode"]==room)[0][0]
+        dict_room_eq[room]=data.iloc[index]["new_Equipment"]
+
+    return dict_room_eq 
+
+
+    
+# turn equipments into numbers for LP constraints , all equipments of 0 are cancelled because otherwise
+def factorize_equipment(df_optimization):
+
+    labels, uniques = df_optimization['new_Equipment'].factorize()
+    df_optimization['new_Equipment']= labels
+    # replace all 0"s to 9"s simply bc otherwise linearizaton doesnt work
+    #df_optimization['new_Equipment'] = df_optimization['new_Equipment'].replace(0, 9)
+
+    return labels, uniques, df_optimization
+
+
+
+
+def create_employees(nr_people,departments, teams,fake):
+    #Generate employees
+    employees = []
+    for i in range(0,nr_people):
+        name = fake.name()
+        department = random.choice(departments)
+        teamsdep = teams[departments.index(department)]
+
+        team= np.random.choice(teamsdep)
+        person = Person(name,department,team,None)
+        employees.append(person)
+    return employees
+
+
+def create_teams(departments,team_names):
+    teams= []
+    for dep in departments:
+        # nr. of teams within department , usually maybe 3 i stick to two now
+        nr_teams =np.random.randint(1,2) 
+        names = team_names[:nr_teams]
+        team_names = team_names[nr_teams:]
+        teams.append(names)
+    return teams

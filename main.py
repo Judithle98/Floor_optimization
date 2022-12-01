@@ -10,10 +10,12 @@ import itertools
 from matplotlib.ticker import MaxNLocator
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-from auxiliary_functions import create_floor_col, dct_rooms_floor,create_perm,concat_perm_rooms, find_capacities
+#from auxiliary_functions import create_floor_col, dct_rooms_floor,create_perm,concat_perm_rooms, find_capacities,find_equipments, factorize_equipment
+from auxiliary_functions import *
 from schedule import schedule_rooms2
 from schedule_equipment import schedule_rooms
-
+from faker import Faker
+from Person import Person
 # load data
 data = pd.read_csv('Data/Data_Planon_Nijmegen.csv', sep=';')
 
@@ -50,6 +52,7 @@ d_rooms_caps = concat_perm_rooms(dct, floors_perm)
 intervals = 20
 printing = True
 incl_equipments= True
+fake=Faker()
 #make 2 new columns start and end
 data_optimization['Start'] = pd.to_datetime(data_optimization.ResStartDateTime)
 data_optimization['End'] = pd.to_datetime(data_optimization.ResEndDateTime)
@@ -62,34 +65,27 @@ data_optimization = data_optimization.sort_values(by='Start', ascending=True)
 all_days = sorted(data_optimization['Start'].dt.strftime('%Y-%m-%d').unique())[5:7] # last argument changes the number of days
 
 
+nr_people= 10
+#departments = ["sales","development", "marketing", 'IT', "support", "HR"]
+departments = ["sales","development", "marketing"]
 
+team_names = np.array([fake.user_name() for i in range(10)])
+print(team_names)
+teams = create_teams(departments,team_names)
+employees= create_employees(nr_people,departments,teams, fake)
+#create random team names
+
+print(employees)
+for e in employees:
+        print(e.disp())
+
+print(len(employees))
 def preprocess_desks(data): 
     #add floor column
     data['Floor'] = create_floor_col(data)
-
-
-
-# for equipments then delete later
-def find_equipments(rooms, data):
-    dict_room_eq= dict.fromkeys(rooms)
-    for room in rooms: 
-        index= np.where(data["ResUnitCode"]==room)[0][0]
-        dict_room_eq[room]=data.iloc[index]["new_Equipment"]
+    equipments_desks = ['(one screen), (two screens)']
+    data['Equipment']= random.choice(equipments_desks)
  
-    return dict_room_eq    
-
-
-# turn equipments into numbers for LP constraints , all equipments of 0 are cancelled because otherwise
-def factorize_equipment(df_optimization):
-
-    labels, uniques = df_optimization['new_Equipment'].factorize()
-    df_optimization['new_Equipment']= labels
-    # replace all 0"s to 9"s simply bc otherwise linearizaton doesnt work
-    #df_optimization['new_Equipment'] = df_optimization['new_Equipment'].replace(0, 9)
-
-    return labels, uniques, df_optimization
-
-
 
 if incl_equipments:
     data_optimization['new_Equipment'] = data_optimization['ResUnitName']
@@ -97,36 +93,33 @@ if incl_equipments:
     equipments= np.unique(data_optimization['new_Equipment'])
     equipments_clean = [eq for eq in equipments if  eq!='(Beamer)' and  eq!='(Smartboard)' and eq!='(Tv screen)' ]
 
-
     for eq in equipments_clean:
         data_optimization['new_Equipment']= data_optimization['new_Equipment'].replace(eq, '')
 
     labels,uniques , data_optimization = factorize_equipment(data_optimization)
     print(uniques)
 
-for comb, rooms  in d_rooms_caps.items():
 
-    dct_rooms_caps = find_capacities(rooms, data_optimization)
-    
-    #for  equipemnts delete later
-    dct_rooms_eq = find_equipments(rooms,data_optimization) 
-    #print(dct_rooms_eq)
-    #print(dct_rooms_eq)
-    # # print("Floors used:")
-    # # print(comb)
-    # # print("Available rooms and capacities")
 
-    print(rooms)
-    capacities_room = list(dct_rooms_caps.values()) # pick all capacities for reserved rooms for specific day [[3.0, 2.0, 3.0, 6.0, 8.0, 6.0]]
-    total_rooms_ids = list(dct_rooms_caps.keys())
-    equipments_room = list(dct_rooms_eq.values())
+# for comb, rooms  in d_rooms_caps.items():
+
+#     dct_rooms_caps = find_capacities(rooms, data_optimization)
     
-    if incl_equipments:
-        #for equipments
-        df =schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room, equipments_room,  data_optimization,dct_rooms_caps,dct_rooms_eq)      
-    else:
-        #no equipments
-        df =schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,  data_optimization,dct_rooms_caps)      
+#     #for  equipemnts delete later
+#     dct_rooms_eq = find_equipments(rooms,data_optimization)
+
+#     print(rooms)
+#     capacities_room = list(dct_rooms_caps.values()) # pick all capacities for reserved rooms for specific day [[3.0, 2.0, 3.0, 6.0, 8.0, 6.0]]
+#     total_rooms_ids = list(dct_rooms_caps.keys())
+#     equipments_room = list(dct_rooms_eq.values())
+
+
+#     if incl_equipments:
+#         #for equipments
+#         df =schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room, equipments_room,  data_optimization,dct_rooms_caps,dct_rooms_eq)      
+#     else:
+#         #no equipments
+#         df =schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,  data_optimization,dct_rooms_caps)      
 
 
 
