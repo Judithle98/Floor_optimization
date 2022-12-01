@@ -15,18 +15,17 @@ import matplotlib.pyplot as plt
 
 ## Helper functions
 
-#creates a column 'Floor'which extract the floor from the ResUnitCode (specific to Planon data)
-def create_floor_col(data_optimization):
-    
-    data_optimization['Floor']=''
+#creturns a list of all floors corresponding to different ResUnitCodes e.g. NIJ 2.14 will return 2
+def create_floor_col(data):
+    data['Floor']=''
     list_floors = []
-    for i in data_optimization.index:
-        if ' ' in data_optimization['ResUnitCode'][i]:
-            list_floors.append(data_optimization['ResUnitCode'][i].split(' ')[1][:1])
+    for i in data.index:
+        if ' ' in data['ResUnitCode'][i]:
+            list_floors.append(data['ResUnitCode'][i].split(' ')[1][:1])
         else:
-            list_floors.append(data_optimization['ResUnitCode'][i].split('-')[1][:1])
+            list_floors.append(data['ResUnitCode'][i].split('-')[1][:1])
 
-    if len(list_floors)==data_optimization.shape[0]:
+    if len(list_floors)==data.shape[0]:
         try: 
             return list_floors
         except: 
@@ -34,8 +33,8 @@ def create_floor_col(data_optimization):
 
 
 # returns dictionary Room: Floor as well as a list of unique floors
-def dct_rooms_floor(data_optimization):
-    unique_meeting_rooms= np.unique(data_optimization['ResUnitCode'])
+def dct_rooms_floor(data):
+    unique_meeting_rooms= np.unique(data['ResUnitCode'])
     rooms_per_floor= []
     list_floors=[]
     for room in unique_meeting_rooms:
