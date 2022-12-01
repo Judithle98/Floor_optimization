@@ -88,7 +88,7 @@ def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equ
 
                                 model.addConstr(np.array([P[d, i, j[1], k] for k in ids]) @ np.array(capacities_m) <= capacities_room[j[0]],
                                                     name='Capacity constraint')
-                                   
+                                #indicator constraint, only if the room is used, then check whether the equipemnts of room and reservation match 
                                 for k in ids:
                                     model.addConstr((P[d,i,j[1], k]==1 )>> (np.array([P[d,i,j[1], k] for k in ids]) @ np.array(meeting_eq) == equipments_room[j[0]]),
                                         name='Equipment constraint') 
@@ -174,8 +174,7 @@ def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equ
 
                             for i in range(intervals):
                                 for j in rooms:
-                                    if max([P[d, i, j, k].X for k in ids]) == 1:
-                                        print('hoho') 
+                                    if max([P[d, i, j, k].X for k in ids]) == 1: 
                                         # Pre - process data for the graph
                                         meeting_id = [P[d, i, j, k].X for k in ids].index(max([P[d, i, j, k].X for k in ids]))
 

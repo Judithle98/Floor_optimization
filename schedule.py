@@ -34,9 +34,7 @@ def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room, da
                 meetings= df_optimization['ResCode']
                 days_optimization = df_optimization['Start'].apply(lambda x: x.strftime('%Y-%m-%d')).unique()
                 #print(df_optimization)
-
-
-
+                
                 # Create a new model
                 model = gp.Model("Scheduling: New Formulation")
                 model.Params.LogToConsole = 0
