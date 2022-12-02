@@ -34,24 +34,37 @@ def create_floor_col(data):
 
 
 # returns dictionary Room: Floor as well as a list of unique floors
-def dct_rooms_floor(data):
-    unique_meeting_rooms= np.unique(data['ResUnitCode'])
-    rooms_per_floor= []
-    list_floors=[]
-    for room in unique_meeting_rooms:
-        if ' ' in room:
-            list_floors.append(room.split(' ')[1][:1])
-        else:
-            list_floors.append(room.split('-')[1][:1])
+def dct_floors_spaces(data, desks= False):
+    if desks: 
 
-    dict_room_floors= dict(zip(unique_meeting_rooms,list_floors))
-    unique_floors= np.unique(list(dict_room_floors.values()))
+        column_name = 'Code'
+        unique_floors = np.unique(data['Floor'])
+        #create per list of desks per floor
+        temp = dict(zip(data[column_name], data['Floor']))
+        
+        dct={}
+        for f in unique_floors:
+            dct['%s' % f]=([k for k,v in temp.items() if v==f])
+                         
+    else: 
+        column_name = 'ResUnitCode' 
+        unique_rooms= np.unique(data[column_name])
+        rooms_per_floor= []
+        list_floors=[]
+        for room in unique_rooms:
+            if ' ' in room:
+                list_floors.append(room.split(' ')[1][:1])
+            else:
+                list_floors.append(room.split('-')[1][:1])
 
-    dct={}
-    for f in unique_floors:
-        dct['%s' % f]=([k for k,v in dict_room_floors.items() if v==f])
-    
-    return dct,unique_floors
+        dict_room_floors= dict(zip(unique_rooms,list_floors))
+        unique_floors= np.unique(list(dict_room_floors.values()))
+                 
+        dct={}
+        for f in unique_floors:
+            dct['%s' % f]=([k for k,v in dict_room_floors.items() if v==f])
+        
+    return dct
 
 #returns all permuations for unique floors
 def create_perm(unique_floors):
@@ -101,7 +114,6 @@ def find_equipments(rooms, data):
 
     return dict_room_eq 
 
-
     
 # turn equipments into numbers for LP constraints , all equipments of 0 are cancelled because otherwise
 def factorize_equipment(df_optimization):
@@ -112,8 +124,6 @@ def factorize_equipment(df_optimization):
     #df_optimization['new_Equipment'] = df_optimization['new_Equipment'].replace(0, 9)
 
     return labels, uniques, df_optimization
-
-
 
 
 def create_employees(nr_people,departments, teams,fake):
@@ -139,3 +149,6 @@ def create_teams(departments,team_names):
         team_names = team_names[nr_teams:]
         teams.append(names)
     return teams
+
+#def most_meetings():
+
