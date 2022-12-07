@@ -10,9 +10,10 @@ import itertools
 from matplotlib.ticker import MaxNLocator
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+from auxiliary_functions import create_reservation_col, p_most_meetings_per_team
 
 
-def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equipments_room,  data_optimization,dct_rooms_caps,dct_rooms_eq, buffer_between_meetings=0,   max_shifted_hours=1, percent_meetings_allowed_for_rescheduling = 0.1, penatly_coefficient=1, rescheduling=False, plot=True): 
+def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equipments_room,  data_optimization,dct_rooms_caps,dct_rooms_eq, employees, teams, buffer_between_meetings=0,   max_shifted_hours=1, percent_meetings_allowed_for_rescheduling = 0.1, penatly_coefficient=1, rescheduling=False, plot=True): 
 
     try: 
         
@@ -30,15 +31,22 @@ def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equ
                 df_optimization['Room ID'] = ['ID: ' + str(x) for x in df_optimization["ResUnitCode"]]
                 df_optimization['Room Cap'] = ['. Capacity: ' + str(x) for x in df_optimization["ResUnitCapacity"]]
                 df_optimization['Room ID & Capacity'] = df_optimization['Room ID'] + df_optimization['Room Cap']
-            
+                
+                #crete reservations
+                #reservation = R
+                #df_optimization['Reservation']= reservation
+                
                 capacities_m = df_optimization['Capacities meeting'].tolist() #= df_optimization['ResUnitCapacity']
                 meeting_eq= list(df_optimization["new_Equipment"])
 
                 meetings= df_optimization['ResCode']
                 days_optimization = df_optimization['Start'].apply(lambda x: x.strftime('%Y-%m-%d')).unique()
-                #print(df_optimization)
-
-
+                df_optimization, reservations = create_reservation_col(df_optimization, employees)
+                type(reservations)
+                dict_team, p_most_meet_team = p_most_meetings_per_team(teams,employees,reservations)
+                #name of the member with the 
+                print(dict_team)
+                print(p_most_meet_team)
 
                 # Create a new model
                 model = gp.Model("Scheduling: New Formulation")
@@ -148,7 +156,7 @@ def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equ
                 model.write('Rescheduling.lp')
                 #model.Params.timeLimit = 2*60
                 model.optimize()
-                print('after optimize') 
+
                 #print(model.getVars())
                 if plot:
 

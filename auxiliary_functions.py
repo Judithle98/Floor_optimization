@@ -12,26 +12,34 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 from faker import Faker
 from Person import Person
+from Reservation import MeetingReservation
 
 
 ## Helper functions
 
 #creturns a list of all floors corresponding to different ResUnitCodes e.g. NIJ 2.14 will return 2
-def create_floor_col(data):
+def create_floor_col(data, desks=False):
     data['Floor']=''
     list_floors = []
-    for i in data.index:
-        if ' ' in data['ResUnitCode'][i]:
-            list_floors.append(data['ResUnitCode'][i].split(' ')[1][:1])
-        else:
-            list_floors.append(data['ResUnitCode'][i].split('-')[1][:1])
+    if desks:
+        column_name = 'Code'
+        print(data['Code'])
+        [list_floors.append(data[column_name][i][0]) for i in data.index]
+        return list_floors
 
-    if len(list_floors)==data.shape[0]:
-        try: 
-            return list_floors
-        except: 
-            print("Floors could not be assigned")
+    else:
+        column_name = 'ResUnitCode'
+        for i in data.index:
+                if ' ' in data[column_name][i]:
+                    list_floors.append(data[column_name][i].split(' ')[1][:1])
+                else:
+                    list_floors.append(data[column_name][i].split('-')[1][:1])
 
+        if len(list_floors)==data.shape[0]:
+                try: 
+                    return list_floors
+                except: 
+                    print("Floors could not be assigned") 
 
 # returns dictionary Room: Floor as well as a list of unique floors
 def dct_floors_spaces(data, desks= False):
@@ -49,7 +57,6 @@ def dct_floors_spaces(data, desks= False):
     else: 
         column_name = 'ResUnitCode' 
         unique_rooms= np.unique(data[column_name])
-        rooms_per_floor= []
         list_floors=[]
         for room in unique_rooms:
             if ' ' in room:
@@ -64,7 +71,7 @@ def dct_floors_spaces(data, desks= False):
         for f in unique_floors:
             dct['%s' % f]=([k for k,v in dict_room_floors.items() if v==f])
         
-    return dct
+    return dct, unique_floors
 
 #returns all permuations for unique floors
 def create_perm(unique_floors):
@@ -151,4 +158,53 @@ def create_teams(departments,team_names):
     return teams
 
 #def most_meetings():
+
+def create_reservation_col(data, employees):
+    for i,row in data.iterrows():
+        reserver= random.choice(employees)
+        nr_members= int(data.at[i,'ResUnitCapacity'])
+        equipment=  data.at[i,'new_Equipment']
+        #everyone except reserver him/herself
+        employees_excl_self=[e for e in employees if e!=employees]
+        members = random.sample(employees_excl_self,nr_members)
+        start =  data.at[i,'Start']
+        end =  data.at[i,'End']
+
+        reservation = MeetingReservation(reserver,equipment, start,end, nr_members, members )
+        data.at[i,'Reservation'] = reservation
+    reservations = data['Reservation'].tolist()
+    return data, reservations
+
+
+
+#calculates the nr of meetings per team member for one team
+def count_meetings(members,reservations):
+
+    nr_meetings = dict.fromkeys(members, 0)
+    count =0
+    
+    for mem in members:
+        for res in reservations:
+            if res.reserver== mem or mem in res.members:
+                count+=1
+        nr_meetings[mem]= count
+    return nr_meetings
+    
+
+#number with most meetings per team
+def p_most_meetings_per_team(unique_teams,employees,reservations):
+    #unique_teams= np.concatenate(unique_teams).ravel()
+    unique_teams= np.array(unique_teams).flatten().tolist()
+    print(unique_teams)
+    dict_member_most_meetings= dict.fromkeys(unique_teams, 0 )
+    most_meetings_per_team= []
+    for team in unique_teams:
+        team_members = [e for e in employees if e.team==team]
+        dict_teams = count_meetings(team_members,reservations)
+        dict_member_most_meetings[team]= max(dict_teams,key=dict_teams.get) , max(dict_teams.values())
+        most_meetings_per_team.append(dict_member_most_meetings[team][0])
+
+    return dict_member_most_meetings,most_meetings_per_team
+
+
 

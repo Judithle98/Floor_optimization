@@ -16,8 +16,11 @@ from schedule import schedule_rooms2
 from schedule_equipment import schedule_rooms
 from faker import Faker
 from Person import Person
-# load data
+# load data meeting reservations
 data = pd.read_csv('Data/Data_Planon_Nijmegen.csv', sep=';')
+
+# load data meeting reservations
+data_desks = pd.read_csv('Data/Data_Flexdesks.csv', sep=';')
 
 # create seperate columns for date, start time, end time
 data['ResStartDate'] = data['ResStartDateTime'].str.split(' ').str[0]
@@ -40,8 +43,13 @@ data_optimization['Day'] = pd.to_datetime(data_optimization['ResStartDate'])
 
 #create column with all floors
 data_optimization['Floor'] = create_floor_col(data_optimization)
+
+data_desks['Floor'] = create_floor_col(data_desks, desks=True)
+
 #obtian dict with room_floor and list of unique floors
-dct,unique_floors = dct_rooms_floor(data_optimization)
+dct, unique_floors= dct_floors_spaces(data_optimization)
+dct_desks = dct_floors_spaces(data_desks, desks= True)
+
 #obtain all permutations of floors
 floors_perm= create_perm(unique_floors)
 #dict for each permutation list of all rooms
@@ -70,22 +78,15 @@ nr_people= 10
 departments = ["sales","development", "marketing"]
 
 team_names = np.array([fake.user_name() for i in range(10)])
-print(team_names)
+
 teams = create_teams(departments,team_names)
 employees= create_employees(nr_people,departments,teams, fake)
 #create random team names
 
-print(employees)
+
 for e in employees:
         print(e.disp())
 
-print(len(employees))
-def preprocess_desks(data): 
-    #add floor column
-    data['Floor'] = create_floor_col(data)
-    equipments_desks = ['(one screen), (two screens)']
-    data['Equipment']= random.choice(equipments_desks)
- 
 
 if incl_equipments:
     data_optimization['new_Equipment'] = data_optimization['ResUnitName']
@@ -97,29 +98,56 @@ if incl_equipments:
         data_optimization['new_Equipment']= data_optimization['new_Equipment'].replace(eq, '')
 
     labels,uniques , data_optimization = factorize_equipment(data_optimization)
-    print(uniques)
 
 
+for comb, rooms  in d_rooms_caps.items():
 
-# for comb, rooms  in d_rooms_caps.items():
-
-#     dct_rooms_caps = find_capacities(rooms, data_optimization)
+    dct_rooms_caps = find_capacities(rooms, data_optimization)
     
-#     #for  equipemnts delete later
-#     dct_rooms_eq = find_equipments(rooms,data_optimization)
-
-#     print(rooms)
-#     capacities_room = list(dct_rooms_caps.values()) # pick all capacities for reserved rooms for specific day [[3.0, 2.0, 3.0, 6.0, 8.0, 6.0]]
-#     total_rooms_ids = list(dct_rooms_caps.keys())
-#     equipments_room = list(dct_rooms_eq.values())
+    #for  equipemnts delete later
+    dct_rooms_eq = find_equipments(rooms,data_optimization)
 
 
-#     if incl_equipments:
-#         #for equipments
-#         df =schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room, equipments_room,  data_optimization,dct_rooms_caps,dct_rooms_eq)      
-#     else:
-#         #no equipments
-#         df =schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,  data_optimization,dct_rooms_caps)      
+    capacities_room = list(dct_rooms_caps.values()) # pick all capacities for reserved rooms for specific day [[3.0, 2.0, 3.0, 6.0, 8.0, 6.0]]
+    total_rooms_ids = list(dct_rooms_caps.keys())
+    equipments_room = list(dct_rooms_eq.values())
 
 
+    # if incl_equipments:
+    #     #for equipments
+    #     df =schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room, equipments_room,  data_optimization,dct_rooms_caps,dct_rooms_eq,employees,teams)      
+    # else:
+    #     #no equipments
+    #     df =schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,  data_optimization,dct_rooms_caps,employees)      
+
+    for day in enumerate(tqdm(all_days)):
+                if day[0] == len(all_days)-1: # just to stop at the end
+
+                    break
+                else:
+
+                    buffer_between_meetings=0
+                    plot=True
+                    rescheduling=False
+
+                    df_optimization = data_optimization[(data_optimization.Start >= f'{day[1]} 00:00:00') & (data_optimization.Start <= f'{all_days[day[0]+1]} 00:00:00')]
+                    df_optimization['Room ID'] = ['ID: ' + str(x) for x in df_optimization["ResUnitCode"]]
+                    df_optimization['Room Cap'] = ['. Capacity: ' + str(x) for x in df_optimization["ResUnitCapacity"]]
+                    df_optimization['Room ID & Capacity'] = df_optimization['Room ID'] + df_optimization['Room Cap']
+                    
+                    #crete reservations
+                    #reservation = R
+                    #df_optimization['Reservation']= reservation
+                    
+                    capacities_m = df_optimization['Capacities meeting'].tolist() #= df_optimization['ResUnitCapacity']
+                    meeting_eq= list(df_optimization["new_Equipment"])
+
+                    meetings= df_optimization['ResCode']
+                    days_optimization = df_optimization['Start'].apply(lambda x: x.strftime('%Y-%m-%d')).unique()
+                    df_optimization, reservations = create_reservation_col(df_optimization, employees)
+                    
+                    dict_team, p_most_meet_team = p_most_meetings_per_team(teams,employees,reservations)
+                    #name of the member with the 
+                    print(dict_team)
+                    print(p_most_meet_team)
 
