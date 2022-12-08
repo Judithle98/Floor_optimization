@@ -30,10 +30,11 @@ def create_floor_col(data, desks=False):
     else:
         column_name = 'ResUnitCode'
         for i in data.index:
-                if ' ' in data[column_name][i]:
-                    list_floors.append(data[column_name][i].split(' ')[1][:1])
-                else:
-                    list_floors.append(data[column_name][i].split('-')[1][:1])
+                list_floors.append(findFloor(data[column_name][i]))
+                # if ' ' in data[column_name][i]:
+                #     list_floors.append(data[column_name][i].split(' ')[1][:1])
+                # else:
+                #     list_floors.append(data[column_name][i].split('-')[1][:1])
 
         if len(list_floors)==data.shape[0]:
                 try: 
@@ -59,10 +60,11 @@ def dct_floors_spaces(data, desks= False):
         unique_rooms= np.unique(data[column_name])
         list_floors=[]
         for room in unique_rooms:
-            if ' ' in room:
-                list_floors.append(room.split(' ')[1][:1])
-            else:
-                list_floors.append(room.split('-')[1][:1])
+            list_floors.append(findFloor(room))
+            # if ' ' in room:
+            #     list_floors.append(room.split(' ')[1][:1])
+            # else:
+            #     list_floors.append(room.split('-')[1][:1])
 
         dict_room_floors= dict(zip(unique_rooms,list_floors))
         unique_floors= np.unique(list(dict_room_floors.values()))
