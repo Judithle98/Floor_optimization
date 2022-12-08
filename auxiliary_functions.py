@@ -181,9 +181,9 @@ def create_reservation_col(data, employees):
 def count_meetings(members,reservations):
 
     nr_meetings = dict.fromkeys(members, 0)
-    count =0
     
     for mem in members:
+        count = 0
         for res in reservations:
             if res.reserver== mem or mem in res.members:
                 count+=1
@@ -201,10 +201,22 @@ def p_most_meetings_per_team(unique_teams,employees,reservations):
     for team in unique_teams:
         team_members = [e for e in employees if e.team==team]
         dict_teams = count_meetings(team_members,reservations)
+        #list of all floors of meetings
         dict_member_most_meetings[team]= max(dict_teams,key=dict_teams.get) , max(dict_teams.values())
         most_meetings_per_team.append(dict_member_most_meetings[team][0])
 
     return dict_member_most_meetings,most_meetings_per_team
 
 
+def add_p_reservations(reservations, employees):
+    
+    for e in employees:
+        e.reservations=  [res for res in reservations if e==res.reserver or e in res.members]
+    
 
+# functions returns floor to specific room
+def findFloor(room):
+    if ' ' in room:
+        return room.split(' ')[1][:1]
+    else:
+        return room.split('-')[1][:1]
