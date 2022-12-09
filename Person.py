@@ -7,7 +7,7 @@ class Person:
     
         
     def disp(self):
-        return f"{self.name} from {self.department} and team: {self.team}"
+        return f"{self.name} from {self.department} and team: {self.team.disp_short()}"
     
     def disp_short(self):
         return f"{self.name}, {self.department}"
