@@ -12,6 +12,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 from faker import Faker
 from Person import Person
+from Team import Team
 from Reservation import MeetingReservation
 
 
@@ -127,29 +128,57 @@ def factorize_equipment(df_optimization):
     return labels, uniques, df_optimization
 
 
-def create_employees(nr_people,departments, teams,fake):
+# def create_employees(nr_people,departments, teams,fake):
+#     #Generate employees
+#     employees = []
+#     for i in range(0,nr_people):
+#         name = fake.name()
+#         department = random.choice(departments)
+#         teamsdep = teams[departments.index(department)]
+
+#         team= np.random.choice(teamsdep)
+#         person = Person(name,department,team,None)
+#         employees.append(person)
+#     return employees
+
+def create_employees(nr_people, teams,fake):
     #Generate employees
     employees = []
     for i in range(0,nr_people):
         name = fake.name()
-        department = random.choice(departments)
-        teamsdep = teams[departments.index(department)]
-
-        team= np.random.choice(teamsdep)
+        #department = random.choice(departments)
+        #teamsdep = teams[departments.index(department)]
+        team = random.choice(teams)
+        department = team.department
+        #team= np.random.choice(teamsdep)
         person = Person(name,department,team,None)
+        person.team.members.append(person)
         employees.append(person)
     return employees
 
-
-def create_teams(departments,team_names):
+def create_teams(departments, teams_per_dep):
+    fake=Faker()
     teams= []
+    team_names = [fake.user_name() for i in range(10)]
     for dep in departments:
-        # nr. of teams within department , usually maybe 3 i stick to two now
-        nr_teams =np.random.randint(1,2) 
-        names = team_names[:nr_teams]
-        team_names = team_names[nr_teams:]
-        teams.append(names)
+        # nr. of teams per department 
+        nr_teams =np.random.randint(1,teams_per_dep) 
+        for i in range(nr_teams): 
+            name = team_names[0]
+            team_names.pop(0)
+            team = Team(name, dep, None, None)
+            teams.append(team)
     return teams
+
+# def create_teams(departments,team_names):
+#     teams= []
+#     for dep in departments:
+#         # nr. of teams within department , usually maybe 3 i stick to two now
+#         nr_teams =np.random.randint(1,2) 
+#         names = team_names[:nr_teams]
+#         team_names = team_names[nr_teams:]
+#         teams.append(names)
+#     return teams
 
 #def most_meetings():
 
@@ -172,35 +201,49 @@ def create_reservation_col(data, employees):
 
 
 #calculates the nr of meetings per team member for one team
-def count_meetings(members,reservations):
+# def count_meetings(members,reservations):
 
-    nr_meetings = dict.fromkeys(members, 0)
+#     nr_meetings = dict.fromkeys(members, 0)
     
-    for mem in members:
-        count = 0
-        for res in reservations:
-            if res.reserver== mem or mem in res.members:
-                count+=1
-        nr_meetings[mem]= count
-    return nr_meetings
+#     for mem in members:
+#         count = 0
+#         for res in reservations:
+#             if res.reserver== mem or mem in res.members:
+#                 count+=1
+#         nr_meetings[mem]= count
+#     return nr_meetings
     
 
 #number with most meetings per team
-def p_most_meetings_per_team(unique_teams,employees,reservations):
-    #unique_teams= np.concatenate(unique_teams).ravel()
-    unique_teams= np.array(unique_teams).flatten().tolist()
-    dict_member_most_meetings= dict.fromkeys(unique_teams, 0 )
-    most_meetings_per_team= []
-    dict_team_members= dict.fromkeys(unique_teams)
-    for team in unique_teams:
-        team_members = [e for e in employees if e.team==team]
-        dict_team_members[team]= team_members
-        dict_teams= count_meetings(team_members,reservations)
-        #list of all floors of meetings
-        dict_member_most_meetings[team]= max(dict_teams,key=dict_teams.get) , max(dict_teams.values())
-        most_meetings_per_team.append(dict_member_most_meetings[team][0])
+# def p_most_meetings_per_team(unique_teams,employees,reservations):
+#     #unique_teams= np.concatenate(unique_teams).ravel()
+#     unique_teams= np.array(unique_teams).flatten().tolist()
+#     dict_member_most_meetings= dict.fromkeys(unique_teams, 0 )
+#     most_meetings_per_team= []
+#     dict_team_members= dict.fromkeys(unique_teams)
+#     for team in unique_teams:
+#         team_members = [e for e in employees if e.team==team]
+#         dict_team_members[team]= team_members
+#         dict_teams= count_meetings(team_members,reservations)
+#         #list of all floors of meetings
+#         dict_member_most_meetings[team]= max(dict_teams,key=dict_teams.get) , max(dict_teams.values())
+#         most_meetings_per_team.append(dict_member_most_meetings[team][0])
 
-    return dict_member_most_meetings,most_meetings_per_team,dict_team_members
+#     return dict_member_most_meetings,most_meetings_per_team,dict_team_members
+
+
+
+def p_most_meetings_per_team(teams, employees, reservations):
+    dict_team_members = dict.fromkeys(teams, 0)
+    dict_team_most_meetings = dict.fromkeys(teams, 0)
+    dict_team_members
+    for team in teams: 
+        dict_team_members[team] = team.members
+        #nr_meetings_team= len(team.reservations)
+        dict_team_most_meetings[team] = team.most_meetings(), len(team.most_meetings().reservations)
+    return dict_team_most_meetings, dict_team_members
+
+
 
 
 # function adds all reservations in which employee is included to the Person class
