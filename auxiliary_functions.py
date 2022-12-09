@@ -31,10 +31,6 @@ def create_floor_col(data, desks=False):
         column_name = 'ResUnitCode'
         for i in data.index:
                 list_floors.append(findFloor(data[column_name][i]))
-                # if ' ' in data[column_name][i]:
-                #     list_floors.append(data[column_name][i].split(' ')[1][:1])
-                # else:
-                #     list_floors.append(data[column_name][i].split('-')[1][:1])
 
         if len(list_floors)==data.shape[0]:
                 try: 
@@ -61,10 +57,6 @@ def dct_floors_spaces(data, desks= False):
         list_floors=[]
         for room in unique_rooms:
             list_floors.append(findFloor(room))
-            # if ' ' in room:
-            #     list_floors.append(room.split(' ')[1][:1])
-            # else:
-            #     list_floors.append(room.split('-')[1][:1])
 
         dict_room_floors= dict(zip(unique_rooms,list_floors))
         unique_floors= np.unique(list(dict_room_floors.values()))
@@ -197,26 +189,28 @@ def count_meetings(members,reservations):
 def p_most_meetings_per_team(unique_teams,employees,reservations):
     #unique_teams= np.concatenate(unique_teams).ravel()
     unique_teams= np.array(unique_teams).flatten().tolist()
-    print(unique_teams)
     dict_member_most_meetings= dict.fromkeys(unique_teams, 0 )
     most_meetings_per_team= []
+    dict_team_members= dict.fromkeys(unique_teams)
     for team in unique_teams:
         team_members = [e for e in employees if e.team==team]
-        dict_teams = count_meetings(team_members,reservations)
+        dict_team_members[team]= team_members
+        dict_teams= count_meetings(team_members,reservations)
         #list of all floors of meetings
         dict_member_most_meetings[team]= max(dict_teams,key=dict_teams.get) , max(dict_teams.values())
         most_meetings_per_team.append(dict_member_most_meetings[team][0])
 
-    return dict_member_most_meetings,most_meetings_per_team
+    return dict_member_most_meetings,most_meetings_per_team,dict_team_members
 
 
+# function adds all reservations in which employee is included to the Person class
 def add_p_reservations(reservations, employees):
     
     for e in employees:
-        e.reservations=  [res for res in reservations if e==res.reserver or e in res.members]
+        e.reservations= [res for res in reservations if e==res.reserver or e in res.members]
     
 
-# functions returns floor to specific room
+# function returns floor to specific room
 def findFloor(room):
     if ' ' in room:
         return room.split(' ')[1][:1]
