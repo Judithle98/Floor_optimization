@@ -1,0 +1,13 @@
+class Team:
+    def __init__(self, name, department,members, reservations):
+        self.name = name
+        self.department = department
+        self.members=members
+        self.reservations= reservations
+    
+        
+    def disp(self):
+        return f"Team: {self.name} from {self.department} and has members: {self.members.disp_short()}"
+    
+    def disp_short(self):
+        return f"{self.name}, {self.department}"
