@@ -76,18 +76,7 @@ def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equ
                     R[j] = model.addVar(vtype=GRB.BINARY, name=f'Room_{j}') # 1 if room is used, 0 otherwise
 
                 
-                if rescheduling:
-                    change_meeting = {}
-                    change_meeting_abs = {}
-                    change_meeting_ceil = {}
-
-                    for d in days:
-                        # ids = data_optimization[data_optimization['Day'] == d]['ResCode'].tolist()
-                        for k in ids:
-                            change_meeting[d, k] = model.addVar(vtype=GRB.SEMIINT, lb=-max_shifted_hours, ub=max_shifted_hours, name=f'Changing meeting_{d}_{k}')
-                            change_meeting_abs[d, k] = model.addVar(vtype=GRB.INTEGER, name=f'Changing meeting_Absolute_{d}_{k}')
-                            change_meeting_ceil[d, k] = model.addVar(vtype=GRB.INTEGER, name=f'Changing meeting_Rounded_{d}_{k}')
-
+               
         
                 model.setObjective(gp.quicksum(R[j[1]] * capacities_room[j[0]] for j in enumerate(rooms)), GRB.MINIMIZE)
                 # model.setObjective(gp.quicksum(U[f] for f in floors), GRB.MINIMIZE)
