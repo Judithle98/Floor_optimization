@@ -10,12 +10,12 @@ import itertools
 from matplotlib.ticker import MaxNLocator
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-from auxiliary_functions import create_reservation_col, p_most_meetings_per_team
+from auxiliary_functions import create_reservation_col, p_most_meetings_per_team, add_p_reservations
 
 
 def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equipments_room,  data_optimization,dct_rooms_caps,dct_rooms_eq, employees, teams, buffer_between_meetings=0,   max_shifted_hours=1, percent_meetings_allowed_for_rescheduling = 0.1, penatly_coefficient=1, rescheduling=False, plot=True): 
 
-    try: 
+    #try: 
         
         for day in enumerate(tqdm(all_days)):
             if day[0] == len(all_days)-1: # just to stop at the end
@@ -42,11 +42,17 @@ def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equ
                 meetings= df_optimization['ResCode']
                 days_optimization = df_optimization['Start'].apply(lambda x: x.strftime('%Y-%m-%d')).unique()
                 df_optimization, reservations = create_reservation_col(df_optimization, employees)
-                type(reservations)
-                dict_team, p_most_meet_team = p_most_meetings_per_team(teams,employees,reservations)
+                add_p_reservations(reservations, employees)
+                
+                for team in teams:
+                    team.add_reservations()
+
+                #dict_team_most_meetings,  dict_team_members = p_most_meetings_per_team(teams,employees,reservations)
+                #type(reservations)
+                #dict_team, p_most_meet_team = p_most_meetings_per_team(teams,employees,reservations)
                 #name of the member with the 
-                print(dict_team)
-                print(p_most_meet_team)
+                #print(dict_team)
+                #print(p_most_meet_team)
 
                 # Create a new model
                 model = gp.Model("Scheduling: New Formulation")
@@ -164,74 +170,88 @@ def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equ
                         dictionary = {}
                         for d in days:
 
-                            #ids = idata_optimization[data_optimization['Day'] == d]['ResCode'].tolist()
-                            #capacities_meeting_day = data_optimization[data_optimization['Day'] == d]['Capacities meeting'].tolist()
+                            finish_day = [df_optimization[(df_optimization['Day'] == d) & (df_optimization['ResCode'] == k)]['Finish time'].item() for k in ids]
 
-                            if rescheduling:
-                                finish_day = [df_optimization[(df_optimization['Day'] == d) & (df_optimization['ResCode'] == k)]['Finish time'].item()
-                                              + change_meeting[d, k].X * 60 for k in ids]
-
-                                start_day = [df_optimization[(df_optimization['Day'] == d) & (df_optimization['ResCode'] == k)]['Start time'].item()
-                                              + change_meeting[d, k].X * 60 + buffer_between_meetings for k in ids]
-                            else:
-                                finish_day = [df_optimization[(df_optimization['Day'] == d) & (df_optimization['ResCode'] == k)]['Finish time'].item() for k in ids]
-
-                                start_day = [df_optimization[(df_optimization['Day'] == d) & (df_optimization['ResCode'] == k)]['Start time'].item()
+                            start_day = [df_optimization[(df_optimization['Day'] == d) & (df_optimization['ResCode'] == k)]['Start time'].item()
                                               + buffer_between_meetings for k in ids]
 
-
-                            for i in range(intervals):
-                                for j in rooms:
-                                    if max([P[d, i, j, k].X for k in ids]) == 1: 
-                                        # Pre - process data for the graph
-                                        meeting_id = [P[d, i, j, k].X for k in ids].index(max([P[d, i, j, k].X for k in ids]))
-
-
-                                        minutes_start = int(start_day[meeting_id] % 60)
-                                        if minutes_start == 0:
-                                            minutes_start = '00'
-                                        minutes_finish = int(finish_day[meeting_id] % 60)
-                                        if minutes_finish == 0:
-                                            minutes_finish = '00'
-                                        ids=list(ids)
-
-                                        dictionary['Room ID & Capacity'] = f'ID: {j}. Capacity: {dct_rooms_caps[j]}. Equipment: {dct_rooms_eq[j]}'
-                                        #dictionary['Room ID & Capacity'] = f'ID: {j}. Capacity: {dct_rooms_caps[j]}'
-                                        dictionary['Start'] = f'{d} {int(start_day[meeting_id] // 60)}:{minutes_start}:00'
-                                        dictionary['End'] = f'{d} {int(finish_day[meeting_id] // 60)}:{minutes_finish}:00'
-                                        dictionary['Meeting ID & Equipment'] = f'ID = {ids[meeting_id]} & Equ: {meeting_eq[meeting_id]}'
-                                        dictionary['Meeting Capacity'] = capacities_m[meeting_id]
+                            dct_room_res= dict.fromkeys(rooms, [])
+                            try: 
+                                if model.status == GRB.OPTIMAL:
+                                    for i in range(intervals):
+                                        for j in rooms:
+                                            if max([P[d, i, j, k].X for k in ids]) == 1: 
+                                                # Pre - process data for the graph
+                                                meeting_id = [P[d, i, j, k].X for k in ids].index(max([P[d, i, j, k].X for k in ids]))
 
 
-                                        data.append(dictionary)
-                                        dictionary = {}
+                                                minutes_start = int(start_day[meeting_id] % 60)
+                                                if minutes_start == 0:
+                                                    minutes_start = '00'
+                                                minutes_finish = int(finish_day[meeting_id] % 60)
+                                                if minutes_finish == 0:
+                                                    minutes_finish = '00'
+                                                ids=list(ids)
 
-                                    elif R[j].X == 0:
+                                                dictionary['Room ID & Capacity'] = f'ID: {j}. Capacity: {dct_rooms_caps[j]}. Equipment: {dct_rooms_eq[j]}'
+                                                #dictionary['Room ID & Capacity'] = f'ID: {j}. Capacity: {dct_rooms_caps[j]}'
+                                                dictionary['Start'] = f'{d} {int(start_day[meeting_id] // 60)}:{minutes_start}:00'
+                                                dictionary['End'] = f'{d} {int(finish_day[meeting_id] // 60)}:{minutes_finish}:00'
+                                                dictionary['Meeting ID & Equipment'] = f'ID = {ids[meeting_id]} & Equ: {meeting_eq[meeting_id]}'
+                                                dictionary['Meeting Capacity'] = capacities_m[meeting_id]
+                                                
+                                            
+                                            
+                                                #index of reservation that belongs to room j 
+                                                index = np.where(df_optimization['ResCode']==ids[meeting_id])[0][0]
+                                                # add reservatios to dict if it is assigned to room j
+                                                reservation = df_optimization.iloc[index]['Reservation']
+                                                if dct_room_res[j]!=[]:
+                                                    dct_room_res[j].append(reservation)
+                                                else:
+                                                    dct_room_res[j]= [reservation]
+                                                data.append(dictionary)
+                                                dictionary = {}
 
-                                        #dictionary['Room ID & Capacity'] = f'ID: {j}. Capacity: {df_optimization[df_optimization["ResUnitCode"]==j]["ResUnitCapacity"].unique()[0]}'
+                                            elif R[j].X == 0:
 
-                                        dictionary['Room ID & Capacity'] = f'ID: {j}. Capacity: {dct_rooms_caps[j]}. Equipment: {dct_rooms_eq[j]}'
-                                        data.append(dictionary)
-                                        dictionary = {}
+                                                #dictionary['Room ID & Capacity'] = f'ID: {j}. Capacity: {df_optimization[df_optimization["ResUnitCode"]==j]["ResUnitCapacity"].unique()[0]}'
 
-                        df = pd.DataFrame(data)
-                        
-                        # final schedule
-                        fig = px.timeline(df,
-                                              x_start="Start",
-                                              x_end="End",
-                                              y='Room ID & Capacity',
-                                              color='Meeting Capacity',
-                                              text='Meeting ID & Equipment',
-                                              title=f'Final schedule, day: {day[1]}, Floors: {comb}',
-                                              # color_continuous_scale='portland'
-                                              )
+                                                dictionary['Room ID & Capacity'] = f'ID: {j}. Capacity: {dct_rooms_caps[j]}. Equipment: {dct_rooms_eq[j]}'
+                                                data.append(dictionary)
+                                                dictionary = {}
+                                    
+                                    #create dictionary for each team on which floor they have a meeting
+                                    dct_team_floors = dict.fromkeys(teams, [])
+                                    for team in teams: 
+                                        dct_team_floors[team]=team.floors_reservations(dct_room_res)
+                                    
+                                    print(dct_team_floors)
+                                    
 
-                        fig.update_traces(textposition='inside')
-                        # fig.update_yaxes(categoryorder = 'category ascending')
-                        fig.update_layout(font=dict(size=17))
-                        fig.write_html('second_figure_rescheduling_final_week.html', auto_open=True)
-                                   
+                                    df = pd.DataFrame(data)
+                                    
+                                    # final schedule
+                                    fig = px.timeline(df,
+                                                        x_start="Start",
+                                                        x_end="End",
+                                                        y='Room ID & Capacity',
+                                                        color='Meeting Capacity',
+                                                        text='Meeting ID & Equipment',
+                                                        title=f'Final schedule, day: {day[1]}, Floors: {comb}',
+                                                        # color_continuous_scale='portland'
+                                                        )
+
+                                    fig.update_traces(textposition='inside')
+                                    # fig.update_yaxes(categoryorder = 'category ascending')
+                                    fig.update_layout(font=dict(size=17))
+                                    fig.write_html('second_figure_rescheduling_final_week.html', auto_open=True)
+                                    return df
+                            except:
+
+                                print("Model infeasible for combination of floors: ", comb)
+
+
 #                         try:
 #                             values = [np.array([[R[j].X for j in rooms]]) * np.array([capacities_room])][0][0].astype(int).tolist()
 #                             empty_rooms_positions = [i for i, e in enumerate(values) if e == 0]
@@ -242,6 +262,3 @@ def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equ
 #                             used_rooms = None
 #                             empty_rooms = None
 
-        return df
-    except:
-        print("Model infeasible. Reservations cannot be allocated on only floors: ", comb)

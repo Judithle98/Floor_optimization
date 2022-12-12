@@ -152,7 +152,7 @@ def create_employees(nr_people, teams,fake):
         department = team.department
         #team= np.random.choice(teamsdep)
         person = Person(name,department,team,None)
-        person.team.members.append(person)
+        team.members.append(person)
         employees.append(person)
     return employees
 
@@ -166,7 +166,7 @@ def create_teams(departments, teams_per_dep):
         for i in range(nr_teams): 
             name = team_names[0]
             team_names.pop(0)
-            team = Team(name, dep, None, None)
+            team = Team(name, dep)
             teams.append(team)
     return teams
 
@@ -192,7 +192,6 @@ def create_reservation_col(data, employees):
         members = random.sample(employees_excl_self,nr_members)
         start =  data.at[i,'Start']
         end =  data.at[i,'End']
-
         reservation = MeetingReservation(reserver,equipment, start,end, nr_members, members )
         data.at[i,'Reservation'] = reservation
     reservations = data['Reservation'].tolist()
@@ -243,15 +242,11 @@ def p_most_meetings_per_team(teams, employees, reservations):
         dict_team_most_meetings[team] = team.most_meetings(), len(team.most_meetings().reservations)
     return dict_team_most_meetings, dict_team_members
 
-
-
-
 # function adds all reservations in which employee is included to the Person class
 def add_p_reservations(reservations, employees):
     
     for e in employees:
         e.reservations= [res for res in reservations if e==res.reserver or e in res.members]
-    
 
 # function returns floor to specific room
 def findFloor(room):
