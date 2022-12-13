@@ -10,41 +10,41 @@ import itertools
 from matplotlib.ticker import MaxNLocator
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-from auxiliary_functions import create_reservation_col, p_most_meetings_per_team, add_p_reservations
+#from auxiliary_functions import create_reservation_col, p_most_meetings_per_team, add_p_reservations
 
 
-def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equipments_room,  data_optimization,dct_rooms_caps,dct_rooms_eq, employees, teams, buffer_between_meetings=0, plot=True): 
+def schedule_rooms(comb,intervals,  days,total_rooms_ids, capacities_room,equipments_room,  df_optimization,dct_rooms_caps,dct_rooms_eq,  teams, meetings ,capacities_m,meeting_eq, buffer_between_meetings=0, plot=True): 
 
     #try: 
         
-        for day in enumerate(tqdm(all_days)):
-            if day[0] == len(all_days)-1: # just to stop at the end
+        # for day in enumerate(tqdm(all_days)):
+        #     if day[0] == len(all_days)-1: # just to stop at the end
 
-                break
-            else:
+        #         break
+        #     else:
 
                 buffer_between_meetings=0
 
-                df_optimization = data_optimization[(data_optimization.Start >= f'{day[1]} 00:00:00') & (data_optimization.Start <= f'{all_days[day[0]+1]} 00:00:00')]
-                df_optimization['Room ID'] = ['ID: ' + str(x) for x in df_optimization["ResUnitCode"]]
-                df_optimization['Room Cap'] = ['. Capacity: ' + str(x) for x in df_optimization["ResUnitCapacity"]]
-                df_optimization['Room ID & Capacity'] = df_optimization['Room ID'] + df_optimization['Room Cap']
+                #df_optimization = data_optimization[(data_optimization.Start >= f'{day[1]} 00:00:00') & (data_optimization.Start <= f'{all_days[day[0]+1]} 00:00:00')]
+                # df_optimization['Room ID'] = ['ID: ' + str(x) for x in df_optimization["ResUnitCode"]]
+                # df_optimization['Room Cap'] = ['. Capacity: ' + str(x) for x in df_optimization["ResUnitCapacity"]]
+                # df_optimization['Room ID & Capacity'] = df_optimization['Room ID'] + df_optimization['Room Cap']
                 
                 #crete reservations
                 #reservation = R
                 #df_optimization['Reservation']= reservation
                 
-                capacities_m = df_optimization['Capacities meeting'].tolist() #= df_optimization['ResUnitCapacity']
-                meeting_eq= list(df_optimization["new_Equipment"])
+                # capacities_m = df_optimization['Capacities meeting'].tolist() #= df_optimization['ResUnitCapacity']
+                # meeting_eq= list(df_optimization["new_Equipment"])
 
-                meetings= df_optimization['ResCode']
-                days_optimization = df_optimization['Start'].apply(lambda x: x.strftime('%Y-%m-%d')).unique()
-                if comb==('0'):
-                    df_optimization, reservations = create_reservation_col(df_optimization, employees)
-                    add_p_reservations(reservations, employees) # add reservations per person
-                    #add all reservations per team
-                    for team in teams:
-                        team.add_reservations()
+                # meetings= df_optimization['ResCode']
+                # days = df_optimization['Start'].apply(lambda x: x.strftime('%Y-%m-%d')).unique()
+                # #if comb==('0'):
+                # df_optimization, reservations = create_reservation_col(df_optimization, employees)
+                # add_p_reservations(reservations, employees) # add reservations per person
+                # #add all reservations per team
+                # for team in teams:
+                #     team.add_reservations()
 
                 #dict_team_most_meetings,  dict_team_members = p_most_meetings_per_team(teams,employees,reservations)
                 #type(reservations)
@@ -60,7 +60,6 @@ def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equ
                 # Decision Variables
                 P = {}
                 R = {}
-                days= days_optimization
                 rooms= total_rooms_ids
                 ids= meetings
 
@@ -160,7 +159,6 @@ def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equ
 
                                                 
                                             
-                                            
                                                 #index of reservation that belongs to room j 
                                                 index = np.where(df_optimization['ResCode']==ids[meeting_id])[0][0]
                                                 # add reservatios to dict if it is assigned to room j
@@ -177,7 +175,6 @@ def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equ
                                                 dictionary['End'] = f'{d} {int(finish_day[meeting_id] // 60)}:{minutes_finish}:00'
                                                 dictionary['Meeting ID & Equipment & Person'] = f'ID = {ids[meeting_id]} & Equ: {meeting_eq[meeting_id]} Reserver: {reservation.reserver.disp_short()}'
                                                 dictionary['Meeting Capacity'] = capacities_m[meeting_id]
-
                                                 data.append(dictionary)
                                                 dictionary = {}
 
@@ -206,7 +203,7 @@ def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equ
                                                         y='Room ID & Capacity',
                                                         color='Meeting Capacity',
                                                         text='Meeting ID & Equipment & Person',
-                                                        title=f'Final schedule, day: {day[1]}, Floors: {comb}',
+                                                        title=f'Final schedule, day: {days[0]}, Floors: {comb}',
                                                         # color_continuous_scale='portland'
                                                         )
 
