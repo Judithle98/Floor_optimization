@@ -89,7 +89,7 @@ def create_perm(unique_floors):
 ##creates a dict by concatentating all rooms per floors according to permutations
 def concat_perm_rooms(dct, floors_perm): 
     dict_perm_rooms=dict.fromkeys(floors_perm,None)
-    for perm in floors_perm: # [0],[1],[2],[3],[0,1,2,3,4]
+    for perm in floors_perm:
         rooms=[]
         for floor in perm: # for individual floors in perm
             for k,v in dct.items():

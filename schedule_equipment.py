@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from auxiliary_functions import create_reservation_col, p_most_meetings_per_team, add_p_reservations
 
 
-def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equipments_room,  data_optimization,dct_rooms_caps,dct_rooms_eq, employees, teams, buffer_between_meetings=0,   max_shifted_hours=1, percent_meetings_allowed_for_rescheduling = 0.1, penatly_coefficient=1, rescheduling=False, plot=True): 
+def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equipments_room,  data_optimization,dct_rooms_caps,dct_rooms_eq, employees, teams, buffer_between_meetings=0, plot=True): 
 
     #try: 
         
@@ -24,8 +24,6 @@ def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equ
             else:
 
                 buffer_between_meetings=0
-                plot=True
-                rescheduling=False
 
                 df_optimization = data_optimization[(data_optimization.Start >= f'{day[1]} 00:00:00') & (data_optimization.Start <= f'{all_days[day[0]+1]} 00:00:00')]
                 df_optimization['Room ID'] = ['ID: ' + str(x) for x in df_optimization["ResUnitCode"]]
@@ -41,11 +39,12 @@ def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equ
 
                 meetings= df_optimization['ResCode']
                 days_optimization = df_optimization['Start'].apply(lambda x: x.strftime('%Y-%m-%d')).unique()
-                df_optimization, reservations = create_reservation_col(df_optimization, employees)
-                add_p_reservations(reservations, employees)
-                
-                for team in teams:
-                    team.add_reservations()
+                if comb==('0'):
+                    df_optimization, reservations = create_reservation_col(df_optimization, employees)
+                    add_p_reservations(reservations, employees) # add reservations per person
+                    #add all reservations per team
+                    for team in teams:
+                        team.add_reservations()
 
                 #dict_team_most_meetings,  dict_team_members = p_most_meetings_per_team(teams,employees,reservations)
                 #type(reservations)
@@ -97,7 +96,6 @@ def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equ
                                         name='Equipment constraint') 
            
                 for d in days:
-                    # ids = data_optimization[data_optimization['Day'] == d]['ResCode'].tolist()
                     for k in ids:
                             model.addConstr(gp.quicksum(P[d, i, j, k] for i in range(intervals) for j in rooms) == 1,
                                                 name='All reservations need to be planned')
@@ -108,35 +106,13 @@ def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equ
                                 model.addConstr(gp.quicksum(P[d, i, j, k] for i in range(intervals) for k in ids) <= 10000000 * R[j],
                                                 name='If there is at least one meeting in the room, the room is occupied')
 
-                if rescheduling:
-                    for d in days:
-                        #ids = data_optimization[data_optimization['Day'] == d]['ResCode'].tolist()
-                        for k in ids:
-                            model.addConstr(change_meeting_abs[d, k] == gp.abs_(change_meeting[d, k]),
-                                                name='Setting an absolute value for the rescheduling')
-                            model.addConstr(change_meeting_ceil[d, k] >= change_meeting_abs[d, k]/max_shifted_hours)
-                            model.addConstr(change_meeting_ceil[d, k] <= change_meeting_abs[d, k]/max_shifted_hours + 0.999)
-
-                            # At least some amount of meetings should change its time:
-                            # print(f'PERCENT RESCHEDULING: {len([change_meeting_abs[d, k] for k in ids])*percent_meetings_allowed_for_rescheduling}')
-                            # print(len([change_meeting_abs[d, k] for k in ids]))
-                            model.addConstr(gp.quicksum(change_meeting_ceil[d, k] for k in ids) <= len([change_meeting_abs[d, k] for k in ids])*percent_meetings_allowed_for_rescheduling, name='Restricting rescheduling')
-                            # model.addConstr(gp.quicksum(change_meeting_abs[d, k] for k in ids) >= 0, name='Allowing rescheduling')
-
+            
                 for d in days:
 
-                    #ids = data_optimization[data_optimization['Day'] == d]['ResCode'].tolist()
-
-                    if rescheduling:
-                        finish_time_day = [df_optimization[(df_optimization['Day'] == d) & (df_optimization['ResCode'] == k)]['Finish time'].item()
-                                               + change_meeting[d, k]*60 for k in ids]
-                        start_time_day = [df_optimization[(df_optimization['Day'] == d) & (df_optimization['ResCode'] == k)]['Start time'].item()
-                                              + change_meeting[d, k]*60 - buffer_between_meetings for k in ids]
-                    else:
-                        finish_time_day = [df_optimization[(df_optimization['Day'] == d) & (df_optimization['ResCode'] == k)][
+                    finish_time_day = [df_optimization[(df_optimization['Day'] == d) & (df_optimization['ResCode'] == k)][
                                                    'Finish time'].item() for k in ids]
 
-                        start_time_day = [df_optimization[(df_optimization['Day'] == d) & (df_optimization['ResCode'] == k)]['Start time'].item() - buffer_between_meetings
+                    start_time_day = [df_optimization[(df_optimization['Day'] == d) & (df_optimization['ResCode'] == k)]['Start time'].item() - buffer_between_meetings
                             for k in ids]
 
                     for i in range(1, intervals):
@@ -148,7 +124,7 @@ def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equ
                                 model.addConstr(next_start_time >= previous_finish_time,
                                                     name='Simultaneous meetings are not allowed')
 
-                model.write('Rescheduling.lp')
+                model.write('Schedule.lp')
                 #model.Params.timeLimit = 2*60
                 model.optimize()
 
@@ -182,12 +158,6 @@ def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equ
                                                     minutes_finish = '00'
                                                 ids=list(ids)
 
-                                                dictionary['Room ID & Capacity'] = f'ID: {j}. Capacity: {dct_rooms_caps[j]}. Equipment: {dct_rooms_eq[j]}'
-                                                #dictionary['Room ID & Capacity'] = f'ID: {j}. Capacity: {dct_rooms_caps[j]}'
-                                                dictionary['Start'] = f'{d} {int(start_day[meeting_id] // 60)}:{minutes_start}:00'
-                                                dictionary['End'] = f'{d} {int(finish_day[meeting_id] // 60)}:{minutes_finish}:00'
-                                                dictionary['Meeting ID & Equipment'] = f'ID = {ids[meeting_id]} & Equ: {meeting_eq[meeting_id]}'
-                                                dictionary['Meeting Capacity'] = capacities_m[meeting_id]
                                                 
                                             
                                             
@@ -199,6 +169,15 @@ def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equ
                                                     dct_room_res[j].append(reservation)
                                                 else:
                                                     dct_room_res[j]= [reservation]
+                                                
+                                                
+                                                dictionary['Room ID & Capacity'] = f'ID: {j}. Capacity: {dct_rooms_caps[j]}. Equipment: {dct_rooms_eq[j]}'
+                                                #dictionary['Room ID & Capacity'] = f'ID: {j}. Capacity: {dct_rooms_caps[j]}'
+                                                dictionary['Start'] = f'{d} {int(start_day[meeting_id] // 60)}:{minutes_start}:00'
+                                                dictionary['End'] = f'{d} {int(finish_day[meeting_id] // 60)}:{minutes_finish}:00'
+                                                dictionary['Meeting ID & Equipment & Person'] = f'ID = {ids[meeting_id]} & Equ: {meeting_eq[meeting_id]} Reserver: {reservation.reserver.disp_short()}'
+                                                dictionary['Meeting Capacity'] = capacities_m[meeting_id]
+
                                                 data.append(dictionary)
                                                 dictionary = {}
 
@@ -226,7 +205,7 @@ def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equ
                                                         x_end="End",
                                                         y='Room ID & Capacity',
                                                         color='Meeting Capacity',
-                                                        text='Meeting ID & Equipment',
+                                                        text='Meeting ID & Equipment & Person',
                                                         title=f'Final schedule, day: {day[1]}, Floors: {comb}',
                                                         # color_continuous_scale='portland'
                                                         )
@@ -234,20 +213,10 @@ def schedule_rooms(comb,intervals, all_days,total_rooms_ids, capacities_room,equ
                                     fig.update_traces(textposition='inside')
                                     # fig.update_yaxes(categoryorder = 'category ascending')
                                     fig.update_layout(font=dict(size=17))
-                                    fig.write_html('second_figure_rescheduling_final_week.html', auto_open=True)
+                                    fig.write_html('Schedule_final_week.html', auto_open=True)
                                     return df
                             except:
 
                                 print("Model infeasible for combination of floors: ", comb)
 
-
-#                         try:
-#                             values = [np.array([[R[j].X for j in rooms]]) * np.array([capacities_room])][0][0].astype(int).tolist()
-#                             empty_rooms_positions = [i for i, e in enumerate(values) if e == 0]
-#                             empty_rooms_capacities = [capacities_room[j] for j in empty_rooms_positions]
-#                             used_rooms = len([i for i in values if i > 0])
-#                             empty_rooms = len([empty_rooms_capacities])
-#                         except:
-#                             used_rooms = None
-#                             empty_rooms = None
 
