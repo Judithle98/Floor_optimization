@@ -96,8 +96,7 @@ if incl_equipments:
     labels,uniques , data_optimization = factorize_equipment(data_optimization)
 
 
-
-
+##Create fake teams and assign them to reservations in df_optimization for specific day
 for day in enumerate(all_days):
     if day[0] == len(all_days)-1: # just to stop at the end
 
@@ -122,7 +121,7 @@ for day in enumerate(all_days):
                 team.add_reservations()
 
 
-#for all 
+##run scheduling algorithm for all floor combinations
 for comb, rooms  in d_rooms_caps.items():
         
 
