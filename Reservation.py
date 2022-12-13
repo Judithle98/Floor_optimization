@@ -13,3 +13,11 @@ class MeetingReservation(Reservation):
 
     def disp(self):
         return f"{self.reserver.disp_short()}, reserves from {self.startTime} to {self.endTime} needs {self.equipment} with {self.nr_members} people: {self.members}"
+
+class FlexDeskReservation(Reservation):
+    def __init__(self,reserver,equipment):
+        super().__init__(reserver,equipment)
+       
+
+    def disp(self):
+        return f"{self.reserver.disp_short()}, reserves flex desk and needs {self.equipment}"
