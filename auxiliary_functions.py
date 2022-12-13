@@ -138,7 +138,9 @@ def create_employees(nr_people, teams,fake):
         team = random.choice(teams)
         department = team.department
         #team= np.random.choice(teamsdep)
-        person = Person(name,department,team,None)
+        #person = Person(name,department,team,None)
+        person = Person(name,department,team)
+
         team.members.append(person)
         employees.append(person)
     return employees
@@ -174,10 +176,14 @@ def create_reservation_col(data, employees):
     reservations = data['Reservation'].tolist()
     return data, reservations
 
-def create_desk_reservations(employees):
-    desks_reservations= []
+def create_desks_reservations(employees):
+    requirements= ['silent', 'window', 'adjustable desk' ]
+    reservations= []
     for e in employees:
-        
+        requirement= random.choice(requirements)
+        reservations.append(FlexDeskReservation(e, requirement))
+    return reservations
+
 
 
 def p_most_meetings_per_team(teams, employees, reservations):
