@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from faker import Faker
 from Person import Person
 from Team import Team
-from Reservation import MeetingReservation
+from Reservation import MeetingReservation, FlexDeskReservation
 
 
 ## Helper functions
@@ -128,19 +128,6 @@ def factorize_equipment(df_optimization):
     return labels, uniques, df_optimization
 
 
-# def create_employees(nr_people,departments, teams,fake):
-#     #Generate employees
-#     employees = []
-#     for i in range(0,nr_people):
-#         name = fake.name()
-#         department = random.choice(departments)
-#         teamsdep = teams[departments.index(department)]
-
-#         team= np.random.choice(teamsdep)
-#         person = Person(name,department,team,None)
-#         employees.append(person)
-#     return employees
-
 def create_employees(nr_people, teams,fake):
     #Generate employees
     employees = []
@@ -170,17 +157,7 @@ def create_teams(departments, teams_per_dep):
             teams.append(team)
     return teams
 
-# def create_teams(departments,team_names):
-#     teams= []
-#     for dep in departments:
-#         # nr. of teams within department , usually maybe 3 i stick to two now
-#         nr_teams =np.random.randint(1,2) 
-#         names = team_names[:nr_teams]
-#         team_names = team_names[nr_teams:]
-#         teams.append(names)
-#     return teams
 
-#def most_meetings():
 
 def create_reservation_col(data, employees):
     for i,row in data.iterrows():
@@ -197,39 +174,10 @@ def create_reservation_col(data, employees):
     reservations = data['Reservation'].tolist()
     return data, reservations
 
-
-
-#calculates the nr of meetings per team member for one team
-# def count_meetings(members,reservations):
-
-#     nr_meetings = dict.fromkeys(members, 0)
-    
-#     for mem in members:
-#         count = 0
-#         for res in reservations:
-#             if res.reserver== mem or mem in res.members:
-#                 count+=1
-#         nr_meetings[mem]= count
-#     return nr_meetings
-    
-
-#number with most meetings per team
-# def p_most_meetings_per_team(unique_teams,employees,reservations):
-#     #unique_teams= np.concatenate(unique_teams).ravel()
-#     unique_teams= np.array(unique_teams).flatten().tolist()
-#     dict_member_most_meetings= dict.fromkeys(unique_teams, 0 )
-#     most_meetings_per_team= []
-#     dict_team_members= dict.fromkeys(unique_teams)
-#     for team in unique_teams:
-#         team_members = [e for e in employees if e.team==team]
-#         dict_team_members[team]= team_members
-#         dict_teams= count_meetings(team_members,reservations)
-#         #list of all floors of meetings
-#         dict_member_most_meetings[team]= max(dict_teams,key=dict_teams.get) , max(dict_teams.values())
-#         most_meetings_per_team.append(dict_member_most_meetings[team][0])
-
-#     return dict_member_most_meetings,most_meetings_per_team,dict_team_members
-
+def create_desk_reservations(employees):
+    desks_reservations= []
+    for e in employees:
+        
 
 
 def p_most_meetings_per_team(teams, employees, reservations):
