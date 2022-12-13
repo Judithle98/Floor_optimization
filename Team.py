@@ -36,9 +36,7 @@ class Team:
     def floors_reservations(self, dct_room_res): 
         floors = []
         for res in self.reservations: 
-
             for k,v in dct_room_res.items():
-
                 if res in v:
                     floors.append(ax.findFloor(k))
         return floors

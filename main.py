@@ -1,5 +1,4 @@
 import gurobipy as gp
-from gurobipy import GRB
 import random
 import numpy as np
 import plotly.express as px
@@ -12,7 +11,6 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 #from auxiliary_functions import create_floor_col, dct_rooms_floor,create_perm,concat_perm_rooms, find_capacities,find_equipments, factorize_equipment
 from auxiliary_functions import *
-from schedule import schedule_rooms2
 from schedule_equipment import schedule_rooms
 from faker import Faker
 from Person import Person
@@ -113,9 +111,10 @@ for day in enumerate(all_days):
         days = df_optimization['Start'].apply(lambda x: x.strftime('%Y-%m-%d')).unique()
 
         #turn all reservations into a Reservation object + randmly adds employees to those reservations
-        df_optimization, reservations = create_reservation_col(df_optimization, employees)
+        df_optimization, meeting_reservations = create_reservation_col(df_optimization, employees)
+   
         # add all reservations to specific employees
-        add_p_reservations(reservations, employees) # add reservations per person
+        add_p_reservations(meeting_reservations, employees) # add reservations per person
         #add all reservations per team
         for team in teams:
                 team.add_reservations()
@@ -124,21 +123,27 @@ for day in enumerate(all_days):
 ##run scheduling algorithm for all floor combinations
 for comb, rooms  in d_rooms_caps.items():
         
+        if comb == ('1', '2', '4'):
+            #per floor combination we obtain dict of rooms-capacities and rooms-equipments
+            dct_rooms_caps = find_capacities(rooms, data_optimization)
+            dct_rooms_eq = find_equipments(rooms,data_optimization)
 
-        #per floor combination we obtain dict of rooms-capacities and rooms-equipments
-        dct_rooms_caps = find_capacities(rooms, data_optimization)
-        dct_rooms_eq = find_equipments(rooms,data_optimization)
+
+            capacities_room = list(dct_rooms_caps.values()) # pick all capacities for reserved rooms for specific day [[3.0, 2.0, 3.0, 6.0, 8.0, 6.0]]
+            total_rooms_ids = list(dct_rooms_caps.keys())
+            equipments_room = list(dct_rooms_eq.values())
+
+            if incl_equipments:
+                #for equipments
+                df, dct_team_floors= schedule_rooms(comb,intervals,  days,total_rooms_ids, capacities_room,equipments_room,  df_optimization,dct_rooms_caps,dct_rooms_eq,  teams, meetings ,capacities_m,meeting_eq, buffer_between_meetings=0, plot=True)
+
+            else:
+                #no equipments
+                df =schedule_rooms(comb,intervals, all_days,days, total_rooms_ids, capacities_room,  data_optimization,dct_rooms_caps,employees, meetings, capacities_m, meeting_eq)      
+        
 
 
-        capacities_room = list(dct_rooms_caps.values()) # pick all capacities for reserved rooms for specific day [[3.0, 2.0, 3.0, 6.0, 8.0, 6.0]]
-        total_rooms_ids = list(dct_rooms_caps.keys())
-        equipments_room = list(dct_rooms_eq.values())
 
-        if incl_equipments:
-            #for equipments
-            df= schedule_rooms(comb,intervals,  days,total_rooms_ids, capacities_room,equipments_room,  df_optimization,dct_rooms_caps,dct_rooms_eq,  teams, meetings ,capacities_m,meeting_eq, buffer_between_meetings=0, plot=True)
-
-        else:
-            #no equipments
-            df =schedule_rooms(comb,intervals, all_days,days, total_rooms_ids, capacities_room,  data_optimization,dct_rooms_caps,employees, meetings, capacities_m, meeting_eq)      
-       
+print(dct_team_floors)
+for team in teams:
+    print(list(dct_team_floors.values())[0])
