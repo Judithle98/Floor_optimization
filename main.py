@@ -112,9 +112,15 @@ for day in enumerate(all_days):
 
         #turn all reservations into a Reservation object + randmly adds employees to those reservations
         df_optimization, meeting_reservations = create_reservation_col(df_optimization, employees)
-   
+        desk_reservations= create_desks_reservations(employees)
         # add all reservations to specific employees
-        add_p_reservations(meeting_reservations, employees) # add reservations per person
+        #add_p_reservations(meeting_reservations, employees) # add reservations per person
+        for e in employees:
+            e.add_reservations(meeting_reservations)
+            e.add_reservations(desk_reservations)
+        
+        print(employees[2].reservations)
+
         #add all reservations per team
         for team in teams:
                 team.add_reservations()
@@ -144,6 +150,6 @@ for comb, rooms  in d_rooms_caps.items():
 
 
 
-print(dct_team_floors)
-for team in teams:
-    print(list(dct_team_floors.values())[0])
+# print(dct_team_floors)
+# # for team in teams:
+# #     print(list(dct_team_floors.values())[0])
