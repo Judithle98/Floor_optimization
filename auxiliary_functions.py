@@ -15,7 +15,6 @@ from Person import Person
 from Team import Team
 from Reservation import MeetingReservation, FlexDeskReservation
 
-
 ## Helper functions
 
 #creturns a list of all floors corresponding to different ResUnitCodes e.g. NIJ 2.14 will return 2
@@ -24,7 +23,6 @@ def create_floor_col(data, desks=False):
     list_floors = []
     if desks:
         column_name = 'Code'
-        print(data['Code'])
         [list_floors.append(data[column_name][i][0]) for i in data.index]
         return list_floors
 

@@ -47,12 +47,15 @@ data_desks['Floor'] = create_floor_col(data_desks, desks=True)
 
 #obtian dict with room_floor and list of unique floors
 dct, unique_floors= dct_floors_spaces(data_optimization)
-dct_desks = dct_floors_spaces(data_desks, desks= True)
+dct_desks = dct_floors_spaces(data_desks, desks= True)[0]
 
 #obtain all permutations of floors
 floors_perm= create_perm(unique_floors)
-#dict for each permutation list of all rooms
-d_rooms_caps = concat_perm_rooms(dct, floors_perm)
+
+#dict for each permutation list of all rooms/desks
+d_perm_rooms = concat_perm_rooms(dct, floors_perm)
+d_perm_desks = concat_perm_rooms(dct_desks, floors_perm)
+
 
 #Some data for the optimization model
 intervals = 20
@@ -127,7 +130,7 @@ for day in enumerate(all_days):
 
 
 ##run scheduling algorithm for all floor combinations
-for comb, rooms  in d_rooms_caps.items():
+for comb, rooms  in d_perm_rooms.items():
         
         if comb == ('1', '2', '4'):
             #per floor combination we obtain dict of rooms-capacities and rooms-equipments
@@ -146,10 +149,25 @@ for comb, rooms  in d_rooms_caps.items():
             else:
                 #no equipments
                 df =schedule_rooms(comb,intervals, all_days,days, total_rooms_ids, capacities_room,  data_optimization,dct_rooms_caps,employees, meetings, capacities_m, meeting_eq)      
-        
+
+#print(dct_team_floors)
+for team in teams:
+    print(team.name)
+    # floor where the team has most meetings
+    mode_floors = mode(dct_team_floors[team])
+    # obtain all desks from that floor
+    if mode_floors=='1':# no flex desks on floor 1
+        mode_floors='2'
+    desks= dct_desks[mode_floors]
+    
+    flex_res= list(team.desks_reservations())
+    for res in flex_res:
+        print(res.equipment)
+
+
+# Solution all meetings on floor 1,2,4 
+# try to optimally sit the team such that everyone has
 
 
 
-# print(dct_team_floors)
-# # for team in teams:
-# #     print(list(dct_team_floors.values())[0])
+
