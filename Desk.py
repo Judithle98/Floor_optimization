@@ -1,9 +1,9 @@
 class Desk:
-    def __init__(self, name, floor, zone):
+    def __init__(self, name, floor, equipment):
         self.name = name
         self.floor = floor
-        self.zone=zone
-        self.equipment= []
+        self.zone=[]
+        self.equipment= equipment
     
     
     def disp_short(self):
