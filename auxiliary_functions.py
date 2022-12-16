@@ -13,6 +13,9 @@ import matplotlib.pyplot as plt
 from faker import Faker
 from Person import Person
 from Team import Team
+from Desk import Desk
+from Zone import Zone
+import string
 from Reservation import MeetingReservation, FlexDeskReservation
 
 ## Helper functions
@@ -45,11 +48,12 @@ def dct_floors_spaces(data, desks= False):
         unique_floors = np.unique(data['Floor'])
         #create per list of desks per floor
         temp = dict(zip(data[column_name], data['Floor']))
-        
         dct={}
         for f in unique_floors:
+
             dct['%s' % f]=([k for k,v in temp.items() if v==f])
-                         
+   
+
     else: 
         column_name = 'ResUnitCode' 
         unique_rooms= np.unique(data[column_name])
@@ -63,9 +67,46 @@ def dct_floors_spaces(data, desks= False):
         dct={}
         for f in unique_floors:
             dct['%s' % f]=([k for k,v in dict_room_floors.items() if v==f])
+ 
         
     return dct, unique_floors
+    
+def create_zones(data):
+    zones= []
+    zone_names= list(string.ascii_uppercase) + list(string.ascii_lowercase)
+    #print(data_desks)
+    data['Zone'] = 0
+    desk_rooms=[code.split('-')[0]   for code in data['Code']]
+    uniques, counts = np.unique(desk_rooms,return_counts=True)
+    for i, room in enumerate(uniques):
+        #find all indices with this room from data_desks
+        indices = np.where(np.array(desk_rooms)==str(room))
+        desks = [ data.at[i, 'Code']  for i in indices[0]]
+        sorted_indices= np.argsort([ int(d.split('-')[1]) for d in desks   ])
+        sorted_desks= list(np.array(desks)[sorted_indices]) # sorted desks with the assumption that flexdesj 3.04-01 is closer to 3.04-02 than 3.04-06
+        print(sorted_desks)
+        equipments_desks= ['silent', 'window', 'adjustable desk' ]
+        sorted_desk_obj= [Desk(d,d[0], random.choice(equipments_desks)) for d in sorted_desks]
 
+        if len(indices[0])<6:
+            #desks = [ data_desks.at[i, 'Code']  for i in indices[0]]
+            size=len(desks)
+        # print(sorted_desks)
+            zones.append(Zone(zone_names.pop(0), room, size, sorted_desk_obj))
+            
+        else: 
+            sizes = [2,3,4,5,6,10]
+            s = random.choice(sizes) 
+            #create a zone of size s out of sorted flex desks 
+            zones.append(Zone(zone_names.pop(0), room, s, sorted_desk_obj[:s] ))
+            sorted_desk_obj = sorted_desk_obj[s:]
+            while sorted_desk_obj!= []:
+                sizes = [2,3,4,5,6,10]
+                s = random.choice(sizes) 
+                #create a zone of size s out of sorted flex desks 
+                zones.append(Zone(zone_names.pop(0), room, s, sorted_desk_obj[:s] ))
+                sorted_desk_obj = sorted_desk_obj[s:]
+    return zones
 #returns all permuations for unique floors
 def create_perm(unique_floors):
 
