@@ -35,9 +35,7 @@ def schedule_rooms(comb,intervals,  days,total_rooms_ids, capacities_room,equipm
 
     for j in rooms:
         R[j] = model.addVar(vtype=GRB.BINARY, name=f'Room_{j}') # 1 if room is used, 0 otherwise
-
-                
-               
+    
         
     model.setObjective(gp.quicksum(R[j[1]] * capacities_room[j[0]] for j in enumerate(rooms)), GRB.MINIMIZE)
     # Constraints
@@ -149,7 +147,7 @@ def schedule_rooms(comb,intervals,  days,total_rooms_ids, capacities_room,equipm
                         dct_team_floors = dict.fromkeys(teams, [])
                         for team in teams: 
                             p_most_meetings= team.most_meetings()
-                            dct_team_floors[team]=team.floors_reservations(dct_room_res), p_most_meetings
+                            dct_team_floors[team]=team.floors_reservations(dct_room_res) # p_most_meetings
                                      
                         #print(dct_team_floors)
                                     
