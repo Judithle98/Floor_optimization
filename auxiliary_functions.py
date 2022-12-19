@@ -84,18 +84,15 @@ def create_zones(data):
         desks = [ data.at[i, 'Code']  for i in indices[0]]
         sorted_indices= np.argsort([ int(d.split('-')[1]) for d in desks   ])
         sorted_desks= list(np.array(desks)[sorted_indices]) # sorted desks with the assumption that flexdesj 3.04-01 is closer to 3.04-02 than 3.04-06
-        print(sorted_desks)
-        equipments_desks= ['silent', 'window', 'adjustable desk' ]
+        equipments_desks= [ 'window', 'adjustable desk' ]
         sorted_desk_obj= [Desk(d,d[0], random.choice(equipments_desks)) for d in sorted_desks]
 
         if len(indices[0])<6:
-            #desks = [ data_desks.at[i, 'Code']  for i in indices[0]]
             size=len(desks)
-        # print(sorted_desks)
             zones.append(Zone(zone_names.pop(0), room, size, sorted_desk_obj))
             
         else: 
-            sizes = [2,3,4,5,6,10]
+            sizes = [2,3,4,5,6,10] # possible zone sizes
             s = random.choice(sizes) 
             #create a zone of size s out of sorted flex desks 
             zones.append(Zone(zone_names.pop(0), room, s, sorted_desk_obj[:s] ))
@@ -137,6 +134,29 @@ def concat_perm_rooms(dct, floors_perm):
                         rooms.append(e)
         dict_perm_rooms[perm] =rooms     
     return dict_perm_rooms
+
+
+
+def find_perm_zones(zones, floors_perm):
+    dct_perm_zones=dict.fromkeys(floors_perm,[])
+    for perm in floors_perm:
+        zs=[]
+        for floor in perm:
+            for zone in zones:
+                if zone.floor==floor:
+                    zs.append(zone)
+        dct_perm_zones[perm] = zs 
+
+    return dct_perm_zones
+
+    return 
+#returns dict per zone the capacity 
+def find_zone_capacities(zones):
+    dct_zone_caps= dict.fromkeys(zones) 
+    for z in zones:
+        dct_zone_caps[z]= z.capacity()
+    return dct_zone_caps
+
 
 ## returns dict with Room:capactiy 
 def find_capacities(rooms, data):
