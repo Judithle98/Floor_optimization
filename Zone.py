@@ -1,12 +1,17 @@
 class Zone:
-    def __init__(self, name, size, desks):
+    def __init__(self, name,room,  size, desks):
         self.name = name
+        self.room= room
         self.size=size
-        self.floor = self.name[0]
         self.desks = desks
-        self.equipment= add_equipments()
+        self.floor = self.room[0]
+        self.equipments= self.add_equipments()
 
-        def add_equipments(self):
-            return [ d.equipment  for d in desks ]
+    def add_equipments(self):
+       return [d.equipment  for d in self.desks ]
+
+
+    def capacity(self):
+        return len(self.desks)
     
     
