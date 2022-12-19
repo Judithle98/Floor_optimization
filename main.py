@@ -1,20 +1,18 @@
 import gurobipy as gp
-import random
 import numpy as np
 import plotly.express as px
 import pandas as pd
-import datetime
 from itertools import combinations, chain
-import itertools
 from matplotlib.ticker import MaxNLocator
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 #from auxiliary_functions import create_floor_col, dct_rooms_floor,create_perm,concat_perm_rooms, find_capacities,find_equipments, factorize_equipment
 from auxiliary_functions import *
 from schedule_equipment import schedule_rooms
+from schedule_desks import schedule_desks
 from faker import Faker
-from Person import Person
-from Team import Team
+
+
 from statistics import mode
 # load data meeting reservations
 data = pd.read_csv('Data/Data_Planon_Nijmegen.csv', sep=';')
@@ -44,18 +42,33 @@ data_optimization['Day'] = pd.to_datetime(data_optimization['ResStartDate'])
 #create column with all floors
 data_optimization['Floor'] = create_floor_col(data_optimization)
 data_desks['Floor'] = create_floor_col(data_desks, desks=True)
-
 #obtian dict with room_floor and list of unique floors
 dct, unique_floors= dct_floors_spaces(data_optimization)
 dct_desks = dct_floors_spaces(data_desks, desks= True)[0]
+print(dct_desks)
+## convert ito actual Des
 
+zones = create_zones(data_desks)
+# print zones!!
+# for z in zones:
+#     print('----------') 
+#     print(z.name)
+#     print(z.room)
+#     print(z.floor)
+#     print(z.equipments)
+#     for d in z.desks:
+#         print(d.name)
+
+
+zones = create_zones(data_desks)
+ 
 #obtain all permutations of floors
 floors_perm= create_perm(unique_floors)
 
 #dict for each permutation list of all rooms/desks
 d_perm_rooms = concat_perm_rooms(dct, floors_perm)
 d_perm_desks = concat_perm_rooms(dct_desks, floors_perm)
-
+d_perm_zones = find_perm_zones(zones, floors_perm)
 
 #Some data for the optimization model
 intervals = 20
@@ -84,10 +97,8 @@ teams = create_teams(departments, 2)
 #teams = create_teams(departments,team_names)
 employees= create_employees(nr_people,teams, fake)
 
-
 if incl_equipments:
     data_optimization['new_Equipment'] = data_optimization['ResUnitName']
-
     equipments= np.unique(data_optimization['new_Equipment'])
     equipments_clean = [eq for eq in equipments if  eq!='(Beamer)' and  eq!='(Smartboard)' and eq!='(Tv screen)' ]
 
@@ -95,6 +106,14 @@ if incl_equipments:
         data_optimization['new_Equipment']= data_optimization['new_Equipment'].replace(eq, '')
 
     labels,uniques , data_optimization = factorize_equipment(data_optimization)
+    
+    ###FLEX DESK####
+    #initialize Desk object column
+    # data_desks['Desk']= 0
+    # equipments_desks= ['silent', 'window', 'adjustable desk' ]
+    # data_desks['Equipment']=random.choice(equipments_desks)
+    # for i, row in data_desks.iterrows:
+    #     data_desks.at[i, 'Desk']= Desk(data_desk[])
 
 
 ##Create fake teams and assign them to reservations in df_optimization for specific day
@@ -128,7 +147,6 @@ for day in enumerate(all_days):
         for team in teams:
                 team.add_reservations()
 
-
 ##run scheduling algorithm for all floor combinations
 for comb, rooms  in d_perm_rooms.items():
         
@@ -150,9 +168,16 @@ for comb, rooms  in d_perm_rooms.items():
                 #no equipments
                 df =schedule_rooms(comb,intervals, all_days,days, total_rooms_ids, capacities_room,  data_optimization,dct_rooms_caps,employees, meetings, capacities_m, meeting_eq)      
 
+
+
+
 #print(dct_team_floors)
+reservation_caps = [] #per team capacities of desks required
+reservation_equipments= []
+e= []
 for team in teams:
     print(team.name)
+    equips = []
     # floor where the team has most meetings
     mode_floors = mode(dct_team_floors[team])
     # obtain all desks from that floor
@@ -161,13 +186,40 @@ for team in teams:
     desks= dct_desks[mode_floors]
     
     flex_res= list(team.desks_reservations())
+    flex_desk_noSilent=[]
     for res in flex_res:
         print(res.equipment)
+        if res.equipment !='silent':
+            #check where the person has most meetings which floor & choose silent room on that floor
+            flex_desk_noSilent.append(res)
+            equips.append(res.equipment)
+    reservation_caps.append(len(flex_desk_noSilent)) # capacity the number of flex desks reserved in a team
+    reservation_equipments.append(equips)
+
+    # floor where team has most meetings 
+print(reservation_caps) 
+print('---------------------')
+print(reservation_equipments)
 
 
-# Solution all meetings on floor 1,2,4 
-# try to optimally sit the team such that everyone has
 
+incl_zones=True
+if incl_zones: 
 
+##run scheduling algorithm for all floor combinations
+    for comb, zones  in d_perm_zones.items(): 
+            
+            if comb == ('1', '2', '4'):
+                #per floor combination find all available zones 
+                dct_zones_caps = find_zone_capacities(zones)
+                # print(dct_zones_caps)
+                
+                capacities_zones = list(dct_zones_caps.values()) # pick all capacities for reserved rooms for specific day [[3.0, 2.0, 3.0, 6.0, 8.0, 6.0]]
+                # total_zone_ids = [z.name  for z in zones]
+                # total_zone_ids=zones
+                # print(total_zone_ids)
+                equipments_zones= [z.equipments for z in zones ]
+                #print(equipments_zones)
+                df= schedule_desks(comb,zones, capacities_zones,equipments_zones,  dct_zones_caps,dct_rooms_eq,  teams, reservation_caps, reservation_equipments, plot=True)
 
-
+               
