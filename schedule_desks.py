@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 
 #def schedule_desks( total_zone_ids, capacities_zone,equipments_zone,  df_optimization,dct_rooms_caps,dct_rooms_eq,  teams, meetings ,capacities_m,meeting_eq, buffer_between_meetings=0, plot=True): 
-def schedule_desks(comb,zones, capacities_zones,equipments_zones,  dct_zones_caps,dct_rooms_eq,  teams, reservation_caps, reservation_equipments, plot=True):
+def schedule_desks(mode_floors, floors_zones, comb,zones, capacities_zones,equipments_zones,  dct_zones_caps,dct_rooms_eq,  teams, reservation_caps, reservation_equipments, plot=True):
 
 
     # Create a new model
@@ -23,7 +23,7 @@ def schedule_desks(comb,zones, capacities_zones,equipments_zones,  dct_zones_cap
                 #zones= total_zone_ids
                 meeting_ids= teams
 
-
+                
                 for j in zones:
                     for k in meeting_ids:
                             P[ j, k] = model.addVar(vtype=GRB.BINARY, name=f'Plan_{j}_{k}') # judith
@@ -41,6 +41,11 @@ def schedule_desks(comb,zones, capacities_zones,equipments_zones,  dct_zones_cap
 
                                 model.addConstr(np.array([P[j[1], k] for k in meeting_ids]) @ np.array(reservation_caps) <= capacities_zones[j[0]],
                                                     name='Capacity constraint')
+                                
+                                for k in meeting_ids: 
+                                            model.addConstr((P[j[1], k]==1 ) >> (np.array([P[j[1], k] for k in meeting_ids]) @ np.array(mode_floors) == int(floors_zones[j[0]])),
+                                                            name='Team should sit where it has the most meetings')
+                    
                                 # #indicator constraint, only if the room is used, then check whether the equipemnts of room and reservation match 
                                 # for k in meeting_ids:
                                 #         model.addConstr((P[j[1], k]==1 )>> (np.array([P[j[1], k] for k in meeting_ids]) @ np.array(meeting_eq) == equipments_room[j[0]]),
@@ -70,8 +75,10 @@ def schedule_desks(comb,zones, capacities_zones,equipments_zones,  dct_zones_cap
                         
                     
                         dct_zone_res= dict.fromkeys(zones, [])
-                        try:
-                                if model.status == GRB.OPTIMAL:
+                        # try:
+                        
+                        if model.status == GRB.OPTIMAL:
+                                        print('hi') 
                                         for j in zones:
                                             if max([P[ j, k].X for k in meeting_ids]) == 1: 
                                                 # Pre - process data for the graph
@@ -89,8 +96,8 @@ def schedule_desks(comb,zones, capacities_zones,equipments_zones,  dct_zones_cap
                                                 #dictionary['Room ID & Capacity'] = f'ID: {j}. Capacity: {dct_rooms_caps[j]}'
                                                 dictionary['Start'] = f'08:00'
                                                 dictionary['End'] = f'10:00'
-                                                dictionary['Team'] = f'ID = {meeting_ids[meeting_id].name}'
-                                                dictionary['Size Team'] = reservation_caps[meeting_id]
+                                                dictionary['Team'] = f'ID = {team.name}'
+                                                dictionary['Size Team'] =   len(team.members)  #reservation_caps[meeting_id]
                                                 data.append(dictionary)
                                                 dictionary = {}
 
@@ -101,30 +108,28 @@ def schedule_desks(comb,zones, capacities_zones,equipments_zones,  dct_zones_cap
                                                 dictionary['Zone & Capacity'] = f'Zone {j.name}, Capacity: {dct_zones_caps[j]}, Floor: {j.floor}'
                                                 data.append(dictionary)
                                                 dictionary = {}
-                                                
- 
-                                                
+          
+                                        df = pd.DataFrame(data)
+                                        print(comb)        
+                                        # final schedule
+                                        fig = px.timeline(df,
+                                                                x_start='Start',
+                                                                x_end='End',
+                                                                y='Zone & Capacity',
+                                                                color='Size Team',
+                                                                text='Team',
+                                                                title=f'Final allocation, Floors: {comb}',
+                                                                # color_continuous_scale='portland'
+                                                                )
+                                        fig.update_traces(textposition='inside')
+                                        # fig.update_yaxes(categoryorder = 'category ascending')
+                                        fig.update_layout(font=dict(size=17))
+                                        fig.write_html('Schedule_final_week.html', auto_open=True)
 
-                                df = pd.DataFrame(data)
-                                print(comb)        
-                                # final schedule
-                                fig = px.timeline(df,
-                                                        x_start='Start',
-                                                        x_end='End',
-                                                        y='Zone & Capacity',
-                                                        color='Size Team',
-                                                        text='Team',
-                                                        title=f'Final allocation, Floors: {comb}',
-                                                        # color_continuous_scale='portland'
-                                                        )
-                                fig.update_traces(textposition='inside')
-                                # fig.update_yaxes(categoryorder = 'category ascending')
-                                fig.update_layout(font=dict(size=17))
-                                fig.write_html('Schedule_final_week.html', auto_open=True)
-
-                                return df, dct_team_floors
-                        except:
-
-                                print("Model infeasible for combination of floors: ", comb)
+                                        return df
+                        else: 
+                            print("Model not feasible")
+                        # except:
+                        #         print("Model infeasible for combination of floors: ", comb)
 
 
