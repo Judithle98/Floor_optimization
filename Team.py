@@ -1,6 +1,6 @@
 #from auxiliary_functions import *
 import auxiliary_functions as ax
-#import auxiliary_functions as ax
+from Reservation import FlexDeskReservation
 import numpy as np
 
 class Team:
@@ -31,7 +31,9 @@ class Team:
         max_index=counts.index(max(counts))
         return self.members[max_index]
 
-    
+    def desks_reservations(self):
+        return  [res  for res in self.reservations if isinstance(res, FlexDeskReservation)]
+
 
     def floors_reservations(self, dct_room_res): 
         floors = []
