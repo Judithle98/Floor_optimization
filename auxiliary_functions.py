@@ -73,20 +73,27 @@ def dct_floors_spaces(data, desks= False):
     
 def create_zones(data):
     zones= []
-    zone_names= list(string.ascii_uppercase) + list(string.ascii_lowercase)
-    #print(data_desks)
+    zone_names= list(string.ascii_uppercase) + list(string.ascii_lowercase)+ [ ''.join(random.choice(string.ascii_uppercase) for i in range(2))  for i in range(100)]
     data['Zone'] = 0
-    desk_rooms=[code.split('-')[0]   for code in data['Code']]
+    desk_rooms= data['Space.Space number']
+    
     uniques, counts = np.unique(desk_rooms,return_counts=True)
+ 
     for i, room in enumerate(uniques):
         #find all indices with this room from data_desks
         indices = np.where(np.array(desk_rooms)==str(room))
-        desks = [ data.at[i, 'Code']  for i in indices[0]]
-        sorted_indices= np.argsort([ int(d.split('-')[1]) for d in desks   ])
+    
+        desks = [data.at[i, 'Code']  for i in indices[0]]
+        if len(desks)==1:
+             print(room)
+        try: 
+            sorted_indices= np.argsort([ int(d.split('-')[1]) for d in desks  ])
+        except: 
+            sorted_indices= np.argsort([ int(d.split('.')[1]) for d in desks   ])
+
         sorted_desks= list(np.array(desks)[sorted_indices]) # sorted desks with the assumption that flexdesj 3.04-01 is closer to 3.04-02 than 3.04-06
         equipments_desks= [ 'window', 'adjustable desk' ]
         sorted_desk_obj= [Desk(d,d[0], random.choice(equipments_desks)) for d in sorted_desks]
-
         if len(indices[0])<6:
             size=len(desks)
             zones.append(Zone(zone_names.pop(0), room, size, sorted_desk_obj))
@@ -98,12 +105,21 @@ def create_zones(data):
             zones.append(Zone(zone_names.pop(0), room, s, sorted_desk_obj[:s] ))
             sorted_desk_obj = sorted_desk_obj[s:]
             while sorted_desk_obj!= []:
-                sizes = [2,3,4,5,6,10]
+                sizes = [4,5,6,10]
                 s = random.choice(sizes) 
                 #create a zone of size s out of sorted flex desks 
                 zones.append(Zone(zone_names.pop(0), room, s, sorted_desk_obj[:s] ))
                 sorted_desk_obj = sorted_desk_obj[s:]
-    return zones
+    silent_zones= [ z for z in zones if z.size==1]
+    # remove all silent zones from zones
+    for z in silent_zones:
+        zones.remove(z) 
+    
+    return zones, silent_zones
+
+
+
+
 #returns all permuations for unique floors
 def create_perm(unique_floors):
 
@@ -149,7 +165,6 @@ def find_perm_zones(zones, floors_perm):
 
     return dct_perm_zones
 
-    return 
 #returns dict per zone the capacity 
 def find_zone_capacities(zones):
     dct_zone_caps= dict.fromkeys(zones) 
@@ -181,9 +196,7 @@ def factorize_equipment(df_optimization):
 
     labels, uniques = df_optimization['new_Equipment'].factorize()
     df_optimization['new_Equipment']= labels
-    # replace all 0"s to 9"s simply bc otherwise linearizaton doesnt work
-    #df_optimization['new_Equipment'] = df_optimization['new_Equipment'].replace(0, 9)
-
+ 
     return labels, uniques, df_optimization
 
 
