@@ -23,10 +23,14 @@ def schedule_desks(mode_floors, floors_zones, comb,zones, capacities_zones,equip
                 #zones= total_zone_ids
                 meeting_ids= teams
 
+
+                ## fact. equipments:
                 
+
+    
                 for j in zones:
                     for k in meeting_ids:
-                            P[ j, k] = model.addVar(vtype=GRB.BINARY, name=f'Plan_{j}_{k}') # judith
+                            P[j, k] = model.addVar(vtype=GRB.BINARY, name=f'Plan_{j}_{k}') # judith
 
                 for j in zones:
                     D[j] = model.addVar(vtype=GRB.BINARY, name=f'Zone_{j.name}') # 1 if room is used, 0 otherwise
@@ -45,12 +49,19 @@ def schedule_desks(mode_floors, floors_zones, comb,zones, capacities_zones,equip
                                 for k in meeting_ids: 
                                             model.addConstr((P[j[1], k]==1 ) >> (np.array([P[j[1], k] for k in meeting_ids]) @ np.array(mode_floors) == int(floors_zones[j[0]])),
                                                             name='Team should sit where it has the most meetings')
-                    
-                                # #indicator constraint, only if the room is used, then check whether the equipemnts of room and reservation match 
+                                
+                                for k in meeting_ids:
+                                            model.addConstr((P[j[1], k]==1 ) >> (gp.quicksum(e  for e in reservation_equipments[j[0]]) == equipments_zones[j[0]]),
+                                                            name='All requirements need to be available in a zone')
+                                
+                            #    # indicator constraint, only if the room is used, then check whether the equipemnts of room and reservation match 
                                 # for k in meeting_ids:
-                                #         model.addConstr((P[j[1], k]==1 )>> (np.array([P[j[1], k] for k in meeting_ids]) @ np.array(meeting_eq) == equipments_room[j[0]]),
-                                #                     name='Equipment constraint') 
-                    
+                                #     for e in reservation_equipments:
+                                        
+                                #           model.addConstr((P[j[1], k]==1 ) >> (np.array([P[j[1], k] for k in meeting_ids]) @ np.array(meeting_eq) == equipments_zones[j[0]]),
+                                #                     name='All team requirements need to be available in the zone') 
+                                        # model.addConstr((P[j[1], k]==1 )>> (np.array([P[j[1], k] for k in meeting_ids]) @ np.array(meeting_eq) == equipments_room[j[0]]),
+                                        #             name='All team requirements need to be available in the zone')
             
                 for k in meeting_ids:
                             model.addConstr(gp.quicksum(P[j, k]  for j in zones) == 1,
@@ -78,7 +89,6 @@ def schedule_desks(mode_floors, floors_zones, comb,zones, capacities_zones,equip
                         # try:
                         
                         if model.status == GRB.OPTIMAL:
-                                        print('hi') 
                                         for j in zones:
                                             if max([P[ j, k].X for k in meeting_ids]) == 1: 
                                                 # Pre - process data for the graph
@@ -110,7 +120,6 @@ def schedule_desks(mode_floors, floors_zones, comb,zones, capacities_zones,equip
                                                 dictionary = {}
           
                                         df = pd.DataFrame(data)
-                                        print(comb)        
                                         # final schedule
                                         fig = px.timeline(df,
                                                                 x_start='Start',
@@ -128,8 +137,8 @@ def schedule_desks(mode_floors, floors_zones, comb,zones, capacities_zones,equip
 
                                         return df
                         else: 
-                            print("Model not feasible")
-                        # except:
-                        #         print("Model infeasible for combination of floors: ", comb)
+
+                            raise Exception("No optimal solution found")
+                        
 
 
