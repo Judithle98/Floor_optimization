@@ -11,7 +11,7 @@ class Person:
         return f"{self.name} from {self.department} and team: {self.team.disp_short()}"
     
     def disp_short(self):
-        return f"{self.name}, {self.department}"
+        return f"{self.name}"
     
     def add_reservations(self, reservations):
         # for e in employees:

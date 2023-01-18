@@ -17,9 +17,10 @@ from Desk import Desk
 from Zone import Zone
 import string
 from Reservation import MeetingReservation, FlexDeskReservation
+from collections import Counter
+from statistics import mode
 
 ## Helper functions
-
 #creturns a list of all floors corresponding to different ResUnitCodes e.g. NIJ 2.14 will return 2
 def create_floor_col(data, desks=False):
     data['Floor']=''
@@ -111,6 +112,9 @@ def create_zones(data):
                 zones.append(Zone(zone_names.pop(0), room, s, sorted_desk_obj[:s] ))
                 sorted_desk_obj = sorted_desk_obj[s:]
     silent_zones= [ z for z in zones if z.size==1]
+    #add equipment 'silent for all silent zones'
+    for z in silent_zones:
+        z.equipments.append('silent')
     # remove all silent zones from zones
     for z in silent_zones:
         zones.remove(z) 
@@ -159,7 +163,9 @@ def find_perm_zones(zones, floors_perm):
         zs=[]
         for floor in perm:
             for zone in zones:
+              
                 if zone.floor==floor:
+
                     zs.append(zone)
         dct_perm_zones[perm] = zs 
 
@@ -182,11 +188,14 @@ def find_capacities(rooms, data):
     return dict_room_caps
 
 # for equipments then delete later
-def find_equipments(rooms, data):
+def find_equipments(rooms, data, factorized=False):
     dict_room_eq= dict.fromkeys(rooms)
     for room in rooms: 
         index= np.where(data["ResUnitCode"]==room)[0][0]
-        dict_room_eq[room]=data.iloc[index]["new_Equipment"]
+        if factorized==True:
+            dict_room_eq[room]=data.iloc[index]["new_Equipment"]
+        else:
+            dict_room_eq[room]=data.iloc[index]["Equipment"]
 
     return dict_room_eq 
 
@@ -195,6 +204,7 @@ def find_equipments(rooms, data):
 def factorize_equipment(df_optimization):
 
     labels, uniques = df_optimization['new_Equipment'].factorize()
+    df_optimization['Equipment']= uniques[labels]
     df_optimization['new_Equipment']= labels
  
     return labels, uniques, df_optimization
@@ -232,7 +242,6 @@ def create_teams(departments, teams_per_dep):
     return teams
 
 
-
 def create_reservation_col(data, employees):
     for i,row in data.iterrows():
         reserver= random.choice(employees)
@@ -249,11 +258,23 @@ def create_reservation_col(data, employees):
     return data, reservations
 
 def create_desks_reservations(employees):
-    requirements= ['silent', 'window', 'adjustable desk' ]
+    requirements= ['silent', 'window', 'adjustable desk'  ]
     reservations= []
     for e in employees:
+        
         requirement= random.choice(requirements)
-        reservations.append(FlexDeskReservation(e, requirement))
+        if requirement=='silent': 
+            req_excl_silent= requirements.copy()
+            req_excl_silent.remove('silent')
+            nr_additional_requirements= random.randint(0,1)
+            if nr_additional_requirements>0:
+                requirement2= random.choice(req_excl_silent)
+                equips=[requirement, requirement2]
+                reservations.append(FlexDeskReservation(e, equips))
+            else: 
+                reservations.append(FlexDeskReservation(e, requirement))
+        else: 
+            reservations.append(FlexDeskReservation(e, requirement))
     return reservations
 
 
@@ -280,3 +301,159 @@ def findFloor(room):
         return room.split(' ')[1][:1]
     else:
         return room.split('-')[1][:1]
+
+
+
+def canBeAllocated_desks(final_comb, teams, zones, floors_perm, dct_combs):
+    #final allocation of teams to zones
+    assignments_team_zones= dict.fromkeys(teams, 0)
+    allAssigned=False
+    ##filter out the silent flex desk reservations 
+    dct_team_deskres= dict.fromkeys(teams,0)
+    for team in teams:
+        flex_res= []
+        for res in team.desks_reservations():
+            if 'silent' not in res.equipment:
+            #if res.equipment!='silent':
+                flex_res.append(res)
+        
+        dct_team_deskres[team]=flex_res, team.equipments
+
+    teams_notAssigned=teams.copy()
+    d_perm_zones = find_perm_zones(zones, floors_perm)
+
+    for team in teams_notAssigned: 
+        #capacity of team without people that sit in silent room
+        team_cap = len(dct_team_deskres[team][0])
+        #floor where team has most meetings
+        if dct_combs[final_comb][team]!=[]: # just added this
+            mode_floor = mode(dct_combs[final_comb][team])
+
+        zones_mostMeetings= d_perm_zones[tuple(mode_floor)]
+        l=  list(final_comb)
+        l.remove(mode_floor)
+        zones_diffFloors = d_perm_zones[tuple(l)]
+        
+        # loop through all zones on the floor where the team has the most meetings
+        for z in zones_mostMeetings:
+            if assignments_team_zones[team]!=0:
+                break
+            #Case 1: size of the zone exactly equals capacity of the team, zone includes all equipments that the team requires, zone is on foor where team has most meetings
+            if  (z.size==team_cap) and (not Counter(dct_team_deskres[team][1])- Counter(z.equipments)) and (z.floor==mode_floor): 
+                assignments_team_zones[team] = z
+                zones_mostMeetings.remove(z) # no other team can be assigned to this zone
+
+        for z in zones_mostMeetings:
+            if assignments_team_zones[team]!=0:
+                break
+            #Case 2: size of the zone is larger than capacity of the team, zone includes all equipments that the team requires, zone is on foor where team has most meetings
+            if (z.size>=team_cap) and (not Counter(dct_team_deskres[team][1])- Counter(z.equipments)) and (z.floor==mode_floor): 
+                assignments_team_zones[team] = z
+                zones_mostMeetings.remove(z) # no other team can be assigned to this zone
+               # print(f"Team: {team.name} with {team_cap} members and requirements {team.equipments} is assigned to zone: {z.name} of size {z.size} on floor {z.floor} with equipments: {z.equipments}")
+
+        if assignments_team_zones[team]==0:
+
+            #Case 3: size of the zone equals capacity of the team,  includes all equipments that the team requires, zone is on differnt floor where team has most meetings
+            for z in zones_diffFloors:
+                if assignments_team_zones[team]!=0:
+                    break
+                if  (z.size==team_cap) and (not Counter(dct_team_deskres[team][1])- Counter(z.equipments)): 
+                    assignments_team_zones[team] = z
+                    zones_diffFloors.remove(z) # no other team can be assigned to this zone
+             #Case 4: size of the zone larger than capacity of the team,  includes all equipments that the team requires, zone is on differnt floor where team has most meetings
+
+            for z in zones_diffFloors:
+                if assignments_team_zones[team]!=0:
+                    break
+                if (z.size>=team_cap) and (not Counter(dct_team_deskres[team][1])- Counter(z.equipments)) : 
+                    assignments_team_zones[team] = z
+                    zones_diffFloors.remove(z) # no other team can be assigned to this zone
+                   
+    if not 0 in assignments_team_zones.values():
+        allAssigned=True
+
+    return allAssigned, assignments_team_zones
+
+
+
+# function checks if all employees that required a silent room can be allocated to one
+# # returns true if enough silent rooms are available + corresponding allocation 
+def can_allocate_silents(teams, comb, silent_zones): 
+    available_zones= [z for z in silent_zones if z.floor in comb]
+    solution_found= False
+    silent_reservations=[]
+    #for all teams add up the reservations that require a silent room
+    teams_notAssigned=teams.copy()
+    for t in teams: 
+        silent_reservations.append(t.silent_res)
+    flattened = [val for sublist in silent_reservations for val in sublist]
+    allocation_silentRooms= dict.fromkeys([res.reserver for res in flattened], 0)
+
+    for res in flattened: 
+            for z in available_zones:
+                if allocation_silentRooms[res.reserver]!=0:
+                    break
+                #Case 1: size of the zone exactly equals capacity of the team, zone includes all equipments that the team requires, zone is on foor where team has most meetings
+                if type(res.equipment)!=list:
+                        equip = [res.equipment]
+                else: 
+                    equip = res.equipment
+    
+                if  Counter(equip)== Counter(z.equipments): 
+                        allocation_silentRooms[res.reserver] = z
+                        available_zones.remove(z) # no other team can be assigned to this zone
+                        
+            if allocation_silentRooms[res.reserver]==0:
+                for z in available_zones: 
+                    if allocation_silentRooms[res.reserver]!=0:
+                        break
+                    if type(res.equipment)!=list:
+                            equip = [res.equipment]
+                    else: 
+                        equip = res.equipment
+                
+                    if  not( Counter(equip)- Counter(z.equipments)):
+                            allocation_silentRooms[res.reserver] = z
+                            available_zones.remove(z) # no other team can be assigned to this zone
+                          
+    if not 0 in allocation_silentRooms.values():
+            solution_found=True
+            print('solution found') 
+            return solution_found, allocation_silentRooms
+    else: 
+        print('No solution found for silents')
+        return solution_found, allocation_silentRooms
+#  
+# def can_allocate_silents(teams, comb, silent_zones): 
+#     solution_found= False
+#     silent_reservations=[]
+#     #for all teams add up the reservations that require a silent room
+#     for t in teams: 
+#         silent_reservations.append(t.silent_res)
+#     flattened = [val for sublist in silent_reservations for val in sublist]
+#     #filter out only silent rooms of specific floor comb
+#     available_zones= [z for z in silent_zones if z.floor in comb]
+#     if len(silent_reservations)<= len(available_zones): 
+#         allocation_silentRooms= dict(zip(silent_zones, [ res.reserver for res in flattened]))
+#         solution_found=True
+#         return solution_found, allocation_silentRooms
+
+
+def disp_allocation(solutions, dct_combs): 
+    for comb, allocation in solutions.items(): 
+
+      
+        print('---------------------------')
+
+        if allocation==[]: 
+            print('Employees could not be assigned zones on floors: ',comb )
+        else: 
+            for team, zone in allocation[0].items(): 
+
+                mode_floor=  mode(dct_combs[comb][team])
+                if zone.floor==mode_floor:
+                    print(f"Team: {team.name} with {len(team.equipments)} members and requirements {team.equipments} is assigned to zone: {zone.name} of size {zone.size} on floor {zone.floor} with equipments: {zone.equipments} on floor where it has most meetings")
+                else: 
+                    print(f"Team: {team.name} with {len(team.equipments)} members and requirements {team.equipments} is assigned to zone: {zone.name} of size {zone.size} on floor {zone.floor} with equipments: {zone.equipments}")
+

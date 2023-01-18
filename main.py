@@ -41,14 +41,14 @@ data_optimization['Day'] = pd.to_datetime(data_optimization['ResStartDate'])
 
 #create column with all floors
 data_optimization['Floor'] = create_floor_col(data_optimization)
-#data_desks['Floor'] = create_floor_col(data_desks, desks=True)
-#obtian dict with room_floor and list of unique floors
+data_desks['Floor'] = create_floor_col(data_desks, desks=True)
+#obtian dict with room_floor and list of unique floors#
 dct, unique_floors= dct_floors_spaces(data_optimization)
 dct_desks = dct_floors_spaces(data_desks, desks= True)[0]
 
+#create zones
 zones = create_zones(data_desks)
 
- 
 #obtain all permutations of floors
 floors_perm= create_perm(unique_floors)
 
@@ -79,7 +79,6 @@ departments = ["sales","development", "marketing"]
 
 
 teams = create_teams(departments, 2)
-#teams = create_teams(departments,team_names)
 employees= create_employees(nr_people,teams, fake)
 
 if incl_equipments:
