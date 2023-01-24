@@ -7,15 +7,11 @@ import pandas as pd
 from itertools import combinations, chain
 from matplotlib.ticker import MaxNLocator
 import matplotlib.pyplot as plt
+from auxiliary_functions import find_equipments
 
-
-def schedule_rooms(comb,intervals,  days,total_rooms_ids, capacities_room,equipments_room,  df_optimization,dct_rooms_caps,dct_rooms_eq,  teams, meetings ,capacities_m,meeting_eq, buffer_between_meetings=0, plot=True): 
-
-   
+def schedule_rooms(comb,intervals,  days,total_rooms_ids, capacities_room,equipments_room,  df_optimization,dct_rooms_caps, dct_rooms_eq_plot,  teams, meetings ,capacities_m,meeting_eq,defac_meeting_eq,  buffer_between_meetings=0, plot=True): 
 
     buffer_between_meetings=0
-
-              
 
     # Create a new model
     model = gp.Model("Scheduling: New Formulation")
@@ -84,7 +80,6 @@ def schedule_rooms(comb,intervals,  days,total_rooms_ids, capacities_room,equipm
     #model.Params.timeLimit = 2*60
     model.optimize()
 
-    #print(model.getVars())
     if plot:
 
             data = []
@@ -115,7 +110,7 @@ def schedule_rooms(comb,intervals,  days,total_rooms_ids, capacities_room,equipm
                                     meeting_ids=list(meeting_ids)
 
                                                 
-                                            
+
                                     #index of reservation that belongs to room j 
                                     index = np.where(df_optimization['ResCode']==meeting_ids[meeting_id])[0][0]
                                     # add reservatios to dict if it is assigned to room j
@@ -125,12 +120,10 @@ def schedule_rooms(comb,intervals,  days,total_rooms_ids, capacities_room,equipm
                                     else:
                                         dct_room_res[j]= [reservation]
                                                 
-                                                
-                                    dictionary['Room ID & Capacity'] = f'ID: {j}. Capacity: {dct_rooms_caps[j]}. Equipment: {dct_rooms_eq[j]}'
-                                    #dictionary['Room ID & Capacity'] = f'ID: {j}. Capacity: {dct_rooms_caps[j]}'
+                                    dictionary['Room ID & Capacity'] = f'Room: {j}. Capacity: {dct_rooms_caps[j]}. Equ: {dct_rooms_eq_plot[j]}'
                                     dictionary['Start'] = f'{d} {int(start_day[meeting_id] // 60)}:{minutes_start}:00'
                                     dictionary['End'] = f'{d} {int(finish_day[meeting_id] // 60)}:{minutes_finish}:00'
-                                    dictionary['Meeting ID & Equipment & Person'] = f'ID = {meeting_ids[meeting_id]} & Equ: {meeting_eq[meeting_id]} Reserver: {reservation.reserver.disp_short()}'
+                                    dictionary['Reserver ID & Equipment'] = f'ID = {meeting_ids[meeting_id]} & Equ: {defac_meeting_eq[meeting_id]} Reserver: {reservation.reserver.disp_short()}'
                                     dictionary['Meeting Capacity'] = capacities_m[meeting_id]
                                     data.append(dictionary)
                                     dictionary = {}
@@ -138,15 +131,13 @@ def schedule_rooms(comb,intervals,  days,total_rooms_ids, capacities_room,equipm
                                 elif R[j].X == 0:
 
                                     #dictionary['Room ID & Capacity'] = f'ID: {j}. Capacity: {df_optimization[df_optimization["ResUnitCode"]==j]["ResUnitCapacity"].unique()[0]}'
-
-                                    dictionary['Room ID & Capacity'] = f'ID: {j}. Capacity: {dct_rooms_caps[j]}. Equipment: {dct_rooms_eq[j]}'
+                                    dictionary['Room ID & Capacity'] = f'Room: {j}. Capacity: {dct_rooms_caps[j]}. Equ: {dct_rooms_eq_plot[j]}'
                                     data.append(dictionary)
                                     dictionary = {}
                                     
                         #create dictionary for each team on which floor they have a meeting
-                        dct_team_floors = dict.fromkeys(teams, [])
+                        dct_team_floors = dict.fromkeys(teams, 0)
                         for team in teams: 
-                            p_most_meetings= team.most_meetings()
                             dct_team_floors[team]=team.floors_reservations(dct_room_res) # p_most_meetings
                                      
                         #print(dct_team_floors)
@@ -160,15 +151,15 @@ def schedule_rooms(comb,intervals,  days,total_rooms_ids, capacities_room,equipm
                                             x_end="End",
                                             y='Room ID & Capacity',
                                             color='Meeting Capacity',
-                                            text='Meeting ID & Equipment & Person',
-                                            title=f'Final schedule, day: {days[0]}, Floors: {comb}',
+                                            text='Reserver ID & Equipment',
+                                            title=f'Meeting schedule, day: {days[0]}, Floors: {comb}',
                                             # color_continuous_scale='portland'
                                             )
 
                         fig.update_traces(textposition='inside')
-                        # fig.update_yaxes(categoryorder = 'category ascending')
                         fig.update_layout(font=dict(size=17))
-                        fig.write_html('Schedule_final_week.html', auto_open=True)
+                        fig.show()
+                        fig.write_html('Optmized Meeting schedule.html', auto_open=True)
                         return df, dct_team_floors
                 except:
 

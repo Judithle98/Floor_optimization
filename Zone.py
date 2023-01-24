@@ -4,7 +4,7 @@ class Zone:
         self.room= room
         self.size=size
         self.desks = desks
-        self.floor = self.room[0]
+        self.floor = self.room.split('-')[1][0]
         self.equipments= self.add_equipments()
 
     def add_equipments(self):
