@@ -56,8 +56,3 @@ class Team:
                 self.equipments.append(res.equipment)
             else:
                 self.silent_res.append(res)
-
-            # if res.equipment!='silent':
-            #     self.equipments.append(res.equipment)
-            # else:
-            #     self.silent_res.append(res)

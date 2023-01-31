@@ -30,7 +30,7 @@ days, intervals, teams, meetings, meeting_capacities, meeting_equipments, defact
 
 ##########################Run scheduling algorithm ################################
 succesful_combs= []
-stop_after_first_solution = True
+stop_after_first_solution = False
 foundSolution=False
 dct_combs= {}
 all_viable_solutions={} # collects all succesful combinations and their allocations

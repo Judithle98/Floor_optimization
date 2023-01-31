@@ -139,9 +139,6 @@ def schedule_meetings(comb,intervals, days,total_rooms_ids, capacities_room,equi
                         dct_team_floors = dict.fromkeys(teams, 0)
                         for team in teams: 
                             dct_team_floors[team]=team.floors_reservations(dct_room_res) # p_most_meetings
-                                     
-                        #print(dct_team_floors)
-                                    
 
                         df = pd.DataFrame(data)
                                     

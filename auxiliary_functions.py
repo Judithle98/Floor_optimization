@@ -19,7 +19,6 @@ from itertools import combinations, chain
 from matplotlib.ticker import MaxNLocator
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-#from schedule_equipment import schedule_rooms
 from Reservation import MeetingReservation, FlexDeskReservation
 from collections import Counter
 from statistics import mode
